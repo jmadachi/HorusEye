@@ -96,20 +96,12 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<TokenService>();
 
-var allowedOrigin = builder.Configuration["CORS:AllowedOrigin"] ?? "";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        if (string.IsNullOrEmpty(allowedOrigin))
-        {
-            policy.SetIsOriginAllowed(_ => true);
-        }
-        else
-        {
-            policy.WithOrigins(allowedOrigin);
-        }
-        policy.AllowAnyHeader()
+        policy.SetIsOriginAllowed(_ => true)
+            .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
