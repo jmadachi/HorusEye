@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: horuseye-api
+    runtime: docker
+    repo: https://github.com/jmadachi/HorusEye
+    plan: free
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        value: Host=${DATABASE_HOST};Port=5432;Database=${DATABASE_DB};Username=${DATABASE_USER};Password=${DATABASE_PASSWORD}
+      - key: DATABASE_HOST
+        fromDatabase:
+          name: horuseye-db
+          property: host
+      - key: DATABASE_DB
+        fromDatabase:
+          name: horuseye-db
+          property: database
+      - key: DATABASE_USER
+        fromDatabase:
+          name: horuseye-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: horuseye-db
+          property: password
+      - key: Jwt__Key
+        sync: false
+      - key: Jwt__Issuer
+        value: HorusEyeAPI
+      - key: Jwt__Audience
+        value: HorusEyeFrontend
+databases:
+  - name: horuseye-db
+    plan: free
+    databaseName: horuseyedb
+    user: horuseyeuser
