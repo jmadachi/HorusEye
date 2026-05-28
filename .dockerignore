@@ -1,0 +1,29 @@
+# .NET
+Backends/WebApi/**/bin/
+Backends/WebApi/**/obj/
+
+# Node
+Frontends/ReactTS/node_modules/
+Frontends/ReactTS/dist/
+
+# Docker
+Databases/PostgreSQL/data/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+
+# Env
+.env
+*.local
+
+# Docs
+Documents/
+
+# OS
+.DS_Store
+Thumbs.db

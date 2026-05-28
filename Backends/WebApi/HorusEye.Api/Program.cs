@@ -96,14 +96,24 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<TokenService>();
 
+var allowedOrigin = builder.Configuration["CORS__AllowedOrigin"];
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(_ => true)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+        if (!string.IsNullOrEmpty(allowedOrigin))
+        {
+            policy.WithOrigins(allowedOrigin)
+                .AllowCredentials();
+        }
+        else
+        {
+            policy.SetIsOriginAllowed(_ => true);
+        }
+
+        policy.AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
@@ -168,23 +178,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
-
-app.Use(async (context, next) =>
-{
-    context.Response.Headers["Access-Control-Allow-Origin"] = context.Request.Headers["Origin"];
-    context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
-    context.Response.Headers["Access-Control-Allow-Headers"] = "*";
-    context.Response.Headers["Access-Control-Allow-Methods"] = "*";
-
-    if (HttpMethods.IsOptions(context.Request.Method))
-    {
-        context.Response.StatusCode = 204;
-        return;
-    }
-
-    await next();
-});
-
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();

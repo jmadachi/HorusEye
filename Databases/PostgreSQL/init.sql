@@ -3,7 +3,7 @@
 -- Descripción: Esquema completo HorusEye - Control de Inventarios RFID
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS public."Tags (
+CREATE TABLE IF NOT EXISTS public."Tags" (
     "Id" VARCHAR(200) NOT NULL,
     "Estado" VARCHAR(20) NOT NULL DEFAULT 'REGISTRADO',
     "FechaRegistro" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
