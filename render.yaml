@@ -34,7 +34,7 @@ services:
       - key: Jwt__Audience
         value: HorusEyeFrontend
       - key: CORS__AllowedOrigin
-        value: https://vercel.app
+        value: https://horus-eye-kappa.vercel.app
 databases:
   - name: horuseye-db
     plan: free
