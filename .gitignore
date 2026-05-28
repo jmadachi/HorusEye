@@ -25,3 +25,4 @@ Databases/PostgreSQL/data/
 # Env
 .env
 *.local
+publish/
