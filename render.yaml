@@ -4,7 +4,8 @@ services:
     runtime: docker
     repo: https://github.com/jmadachi/HorusEye
     plan: free
-    dockerfilePath: Backends/WebApi/Dockerfile
+    dockerContext: Backends/WebApi
+    dockerfilePath: Dockerfile
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
