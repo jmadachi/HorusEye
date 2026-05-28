@@ -1,0 +1,27 @@
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# .NET
+Backends/WebApi/**/bin/
+Backends/WebApi/**/obj/
+Backends/WebApi/**/*.user
+Backends/WebApi/**/.vs/
+
+# Node
+Frontends/ReactTS/node_modules/
+Frontends/ReactTS/dist/
+
+# Docker
+Databases/PostgreSQL/data/
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Env
+.env
+*.local

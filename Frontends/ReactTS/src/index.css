@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  --primary: #1e3a5f;
+  --primary-light: #2d5a8e;
+  --accent: #f59e0b;
+  --danger: #ef4444;
+  --success: #22c55e;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}

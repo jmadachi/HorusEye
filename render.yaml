@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: horuseye-api
+    runtime: image
+    repo: https://github.com/jmadachi/HorusEye
+    plan: free
+    dockerfilePath: Backends/WebApi/Dockerfile
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: horuseye-db
+          property: connectionString
+      - key: Jwt__Key
+        sync: false
+      - key: Jwt__Issuer
+        value: HorusEyeAPI
+      - key: Jwt__Audience
+        value: HorusEyeFrontend
+      - key: CORS__AllowedOrigin
+        value: https://horuseye.vercel.app
+
+databases:
+  - name: horuseye-db
+    plan: free
+    databaseName: horuseyedb
+    user: horuseyeuser
