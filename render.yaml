@@ -2,7 +2,6 @@ services:
   - type: web
     name: horuseye-api
     runtime: image
-    repo: https://github.com/jmadachi/HorusEye
     plan: free
     image:
       url: ghcr.io/jmadachi/horuseye-api:latest
