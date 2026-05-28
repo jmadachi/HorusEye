@@ -1,10 +1,11 @@
 services:
   - type: web
     name: horuseye-api
-    runtime: docker
+    runtime: image
     repo: https://github.com/jmadachi/HorusEye
     plan: free
-    dockerfilePath: Dockerfile
+    image:
+      url: ghcr.io/jmadachi/horuseye-api:latest
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
