@@ -1,7 +1,7 @@
 services:
   - type: web
     name: horuseye-api
-    runtime: image
+    runtime: docker
     repo: https://github.com/jmadachi/HorusEye
     plan: free
     dockerfilePath: Backends/WebApi/Dockerfile
