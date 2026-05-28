@@ -12,7 +12,7 @@ services:
       - key: ConnectionStrings__DefaultConnection
         fromDatabase:
           name: horuseye-db
-          property: connectionString
+          property: connectionStringParameter
       - key: Jwt__Key
         sync: false
       - key: Jwt__Issuer
