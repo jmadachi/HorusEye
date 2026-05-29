@@ -1892,4 +1892,41 @@ Se agregaron estados de paginación y selector de ítems por página:
 
 ---
 
+## 22. Simulación de Autorizaciones (29-Mayo-2026)
+
+### 22.1 Script de simulación
+
+Se creó `Documents/simulacion-autorizaciones.sh` para probar el flujo completo de autorizaciones de salida:
+
+```
+Uso: bash Documents/simulacion-autorizaciones.sh
+```
+
+**Pasos que ejecuta:**
+
+| Paso | Acción | Verifica |
+|------|--------|----------|
+| 1 | Login como admin | Autenticación JWT |
+| 2 | Lista activos disponibles | Conexión a API |
+| 3 | Crea 3 autorizaciones (vence: 2026-06-15) | POST /api/autorizaciones |
+| 4 | Consulta autorizaciones creadas | GET /api/autorizaciones (paginado) |
+| 5 | SALIDA con activo autorizado → **sin alarma** | Lógica de autorización |
+| 6 | SALIDA con activo NO autorizado → **alarma activada** | `activarAlarmaSonora: true` |
+| 7 | Resumen del dashboard | KPIs actualizados |
+
+### 22.2 Resultado esperado
+
+- Paso 5: `activarAlarmaSonora: false` — La salida está autorizada
+- Paso 6: `activarAlarmaSonora: true` — La salida NO está autorizada, se activa la alarma
+- Las autorizaciones se ven en `https://horus-eye-kappa.vercel.app/autorizaciones`
+- Los movimientos aparecen en el Dashboard en tiempo real
+
+### 22.3 Archivo Creado
+
+| Archivo | Cambio |
+|---------|--------|
+| `Documents/simulacion-autorizaciones.sh` | **Nuevo:** script de simulación del flujo completo de autorizaciones |
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*
