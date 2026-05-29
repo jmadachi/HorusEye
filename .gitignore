@@ -27,3 +27,6 @@ Databases/PostgreSQL/data/
 *.local
 publish/
 jwt-key.txt
+
+# Documents
+Documents/*.txt
