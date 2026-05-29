@@ -24,13 +24,24 @@ public class TagsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<Tag>>>> GetAll()
+    public async Task<ActionResult<ApiResponse<object>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
-        var tags = await _context.Tags
-            .OrderByDescending(t => t.FechaRegistro)
+        var query = _context.Tags
+            .OrderByDescending(t => t.FechaRegistro);
+
+        var total = await query.CountAsync();
+        var tags = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
-        return Ok(ApiResponse<List<Tag>>.Ok(tags));
+        return Ok(ApiResponse<object>.Ok(new
+        {
+            Items = tags,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        }));
     }
 
     [HttpGet("disponibles")]

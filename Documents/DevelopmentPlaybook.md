@@ -1664,4 +1664,105 @@ Se agregó un componente de paginación debajo de la tabla con:
 
 ---
 
+## 19. Paginación de Consultas — Tags RFID (29-Mayo-2026)
+
+### 19.1 Motivación
+
+El endpoint `GET /api/tags` retornaba todos los tags RFID sin paginación. Con 111+ activos registrados y una cantidad similar de tags, la carga de datos completa impactaba el rendimiento del frontend.
+
+### 19.2 Cambios en el Backend
+
+**Archivo:** `Backends/WebApi/HorusEye.Api/Controllers/TagsController.cs`
+
+Se modificó `GetAll()` para aceptar parámetros de paginación, siguiendo el mismo patrón que `ActivosController` y `MovimientosController`:
+
+| Parámetro | Tipo | Default | Descripción |
+|-----------|------|---------|-------------|
+| `page` | `int` | 1 | Número de página (1-based) |
+| `pageSize` | `int` | 50 | Elementos por página |
+
+**Antes:**
+```csharp
+[HttpGet]
+public async Task<ActionResult<ApiResponse<List<Tag>>>> GetAll()
+{
+    var tags = await _context.Tags
+        .OrderByDescending(t => t.FechaRegistro)
+        .ToListAsync();
+    return Ok(ApiResponse<List<Tag>>.Ok(tags));
+}
+```
+
+**Después:**
+```csharp
+[HttpGet]
+public async Task<ActionResult<ApiResponse<object>>> GetAll(
+    [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+{
+    var query = _context.Tags
+        .OrderByDescending(t => t.FechaRegistro);
+
+    var total = await query.CountAsync();
+    var tags = await query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .ToListAsync();
+
+    return Ok(ApiResponse<object>.Ok(new
+    {
+        Items = tags,
+        Total = total,
+        Page = page,
+        PageSize = pageSize
+    }));
+}
+```
+
+El endpoint `GET /api/tags/disponibles` se mantiene sin cambios, ya que es usado internamente por los formularios de creación de activos y siempre necesita la lista completa de tags disponibles.
+
+### 19.3 Cambios en el Frontend
+
+**Archivo:** `Frontends/ReactTS/src/pages/Tags.tsx`
+
+Se agregaron estados de paginación y se actualizó `loadTags` para consumir el endpoint paginado:
+
+```typescript
+const [page, setPage] = useState(1);
+const [total, setTotal] = useState(0);
+const pageSize = 15;
+const totalPages = Math.ceil(total / pageSize);
+
+const loadTags = async (p?: number) => {
+  const currentPage = p ?? page;
+  const { data } = await api.get(`/api/tags?page=${currentPage}&pageSize=${pageSize}`);
+  if (data.success) {
+    setTags(data.data.items);
+    setTotal(data.data.total);
+    setPage(data.data.page);
+  }
+};
+```
+
+Se agregó el mismo componente de paginación debajo de la tabla con:
+- **Información contextual:** "Mostrando X-Y de Z tags"
+- **Botones Anterior/Siguiente** con deshabilitado en extremos
+- **Números de página** con estilo activo
+- Tras registrar, cambiar estado o reportar daño, redirige a página 1.
+
+### 19.4 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `Controllers/TagsController.cs` | `GetAll()` acepta `page`/`pageSize`; respuesta paginada con `Items`, `Total`, `Page`, `PageSize` |
+| `Frontends/ReactTS/src/pages/Tags.tsx` | Estados `page`/`total`/`totalPages`; `loadTags` con parámetro de página; UI de paginación |
+
+### 19.5 Endpoints Actualizados
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/api/tags?page=1&pageSize=50` | Authenticated | Listar tags paginados |
+| GET | `/api/tags/disponibles` | Authenticated | Tags disponibles (sin paginación, lista completa) |
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*

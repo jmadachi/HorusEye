@@ -2,24 +2,33 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import type { Tag } from '../types';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function TagsPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [showRegister, setShowRegister] = useState(false);
   const [newTagId, setNewTagId] = useState('');
   const [showDamage, setShowDamage] = useState<{ tagId: string; descripcion: string } | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 15;
+  const totalPages = Math.ceil(total / pageSize);
   const { hasRole } = useAuth();
   const isGestion = hasRole('Usuario de Gestión');
 
-  const loadTags = async () => {
-    const { data } = await api.get('/api/tags');
-    if (data.success) setTags(data.data);
+  const loadTags = async (p?: number) => {
+    const currentPage = p ?? page;
+    const { data } = await api.get(`/api/tags?page=${currentPage}&pageSize=${pageSize}`);
+    if (data.success) {
+      setTags(data.data.items);
+      setTotal(data.data.total);
+      setPage(data.data.page);
+    }
   };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadTags();
+    loadTags(1);
   }, []);
 
   const registerTag = async () => {
@@ -27,7 +36,7 @@ export default function TagsPage() {
       await api.post('/api/tags', { tagId: newTagId });
       setNewTagId('');
       setShowRegister(false);
-      loadTags();
+      loadTags(1);
     } catch (err) {
       console.error('Error registering tag:', err);
     }
@@ -36,7 +45,7 @@ export default function TagsPage() {
   const updateEstado = async (tagId: string, estado: string) => {
     try {
       await api.put(`/api/tags/${tagId}/estado`, { estado });
-      loadTags();
+      loadTags(1);
     } catch (err) {
       console.error('Error updating tag:', err);
     }
@@ -49,7 +58,7 @@ export default function TagsPage() {
         descripcion: showDamage.descripcion
       });
       setShowDamage(null);
-      loadTags();
+      loadTags(1);
     } catch (err) {
       console.error('Error reporting damage:', err);
     }
@@ -180,6 +189,43 @@ export default function TagsPage() {
           </tbody>
         </table>
       </div>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} de {total} tags
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadTags(page - 1)}
+              disabled={page <= 1}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => loadTags(p)}
+                className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${
+                  p === page
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => loadTags(page + 1)}
+              disabled={page >= totalPages}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
