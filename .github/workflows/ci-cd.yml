@@ -70,23 +70,10 @@ jobs:
     needs: [backend-build-and-test, frontend-build-and-lint]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - name: Deploy Backend to Render
         run: |
-          curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RENDER_DEPLOY_HOOK }}" \
-            -H "Accept: application/json" \
-            "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys"
+          curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
 
       - name: Deploy Frontend to Vercel
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          npm install -g vercel
-          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-          vercel build --prod --token=$VERCEL_TOKEN
-          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
-        working-directory: ${{ env.FRONTEND_DIR }}
+          curl -s -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"

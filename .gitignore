@@ -26,3 +26,4 @@ Databases/PostgreSQL/data/
 .env
 *.local
 publish/
+jwt-key.txt
