@@ -23,11 +23,16 @@ public class AutorizacionesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<AutorizacionResponse>>>> GetAll()
+    public async Task<ActionResult<ApiResponse<object>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
-        var autorizaciones = await _context.AutorizacionesSalida
+        var query = _context.AutorizacionesSalida
             .Include(a => a.Activo)
-            .OrderByDescending(a => a.FechaAutorizacion)
+            .OrderByDescending(a => a.FechaAutorizacion);
+
+        var total = await query.CountAsync();
+        var autorizaciones = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(a => new AutorizacionResponse
             {
                 Id = a.Id,
@@ -41,7 +46,13 @@ public class AutorizacionesController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(ApiResponse<List<AutorizacionResponse>>.Ok(autorizaciones));
+        return Ok(ApiResponse<object>.Ok(new
+        {
+            Items = autorizaciones,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        }));
     }
 
     [HttpGet("activas")]

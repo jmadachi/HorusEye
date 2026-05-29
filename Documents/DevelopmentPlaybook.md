@@ -1826,4 +1826,70 @@ const [pageSize, setPageSize] = useState(15);   // Tags
 
 ---
 
+## 21. Paginación de Autorizaciones (29-Mayo-2026)
+
+### 21.1 Motivación
+
+El endpoint `GET /api/autorizaciones` retornaba todas las autorizaciones de salida sin paginación, igual que ocurría inicialmente con activos y tags.
+
+### 21.2 Cambios en el Backend
+
+**Archivo:** `Backends/WebApi/HorusEye.Api/Controllers/AutorizacionesController.cs`
+
+Se modificó `GetAll()` para aceptar `page` y `pageSize`, siguiendo el mismo patrón que los demás controladores:
+
+```csharp
+[HttpGet]
+public async Task<ActionResult<ApiResponse<object>>> GetAll(
+    [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+{
+    var query = _context.AutorizacionesSalida
+        .Include(a => a.Activo)
+        .OrderByDescending(a => a.FechaAutorizacion);
+
+    var total = await query.CountAsync();
+    var autorizaciones = await query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(a => new AutorizacionResponse { ... })
+        .ToListAsync();
+
+    return Ok(ApiResponse<object>.Ok(new
+    {
+        Items = autorizaciones,
+        Total = total,
+        Page = page,
+        PageSize = pageSize
+    }));
+}
+```
+
+### 21.3 Cambios en el Frontend
+
+**Archivo:** `Frontends/ReactTS/src/pages/Autorizaciones.tsx`
+
+Se agregaron estados de paginación y selector de ítems por página:
+
+- `loadAutorizaciones` acepta `(p?, ps?)` y consume `GET /api/autorizaciones?page=&pageSize=`
+- Se agregó la barra de paginación con navegación (anterior/siguiente/números de página)
+- Se agregó selector `<select>` con opciones 5, 10, 15, 25, 50
+- Tras crear, revocar o eliminar, redirige a página 1
+- `loadActivos` (usado para el dropdown del modal) se ajustó para enviar `pageSize=200` y manejar tanto el formato paginado como el legacy (`data.data.items ?? data.data`)
+
+### 21.4 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `Controllers/AutorizacionesController.cs` | `GetAll()` acepta `page`/`pageSize`; respuesta paginada con `Items`, `Total`, `Page`, `PageSize` |
+| `Frontends/ReactTS/src/pages/Autorizaciones.tsx` | Estados `page`/`total`/`pageSize`; `loadAutorizaciones(p?, ps?)`; UI de paginación con selector de ítems |
+
+### 21.5 Endpoint Actualizado
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/api/autorizaciones?page=1&pageSize=50` | Gestión | Listar autorizaciones paginadas |
+| GET | `/api/autorizaciones/activas` | Gestión | Autorizaciones activas (sin paginación) |
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*

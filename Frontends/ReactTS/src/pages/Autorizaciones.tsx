@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import type { Activo } from '../types';
-import { Plus, X, ShieldOff, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, X, ShieldOff, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Autorizacion {
   id: number;
@@ -21,26 +21,36 @@ export default function Autorizaciones() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ activoId: '', autorizadoPor: '', fechaVencimiento: '' });
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const totalPages = Math.ceil(total / pageSize);
   const { hasRole } = useAuth();
   const isGestion = hasRole('Usuario de Gestión');
 
-  const loadAutorizaciones = async () => {
+  const loadAutorizaciones = async (p?: number, ps?: number) => {
     try {
-      const { data } = await api.get('/api/autorizaciones');
-      if (data.success) setAutorizaciones(data.data);
+      const currentPage = p ?? page;
+      const currentSize = ps ?? pageSize;
+      const { data } = await api.get(`/api/autorizaciones?page=${currentPage}&pageSize=${currentSize}`);
+      if (data.success) {
+        setAutorizaciones(data.data.items);
+        setTotal(data.data.total);
+        setPage(data.data.page);
+      }
     } catch { /* ignore */ }
   };
 
   const loadActivos = async () => {
     try {
-      const { data } = await api.get('/api/activos');
-      if (data.success) setActivos(data.data);
+      const { data } = await api.get('/api/activos?pageSize=200');
+      if (data.success) setActivos(data.data.items ?? data.data);
     } catch { /* ignore */ }
   };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadAutorizaciones();
+    loadAutorizaciones(1);
     loadActivos();
   }, []);
 
@@ -66,7 +76,7 @@ export default function Autorizaciones() {
       }
       await api.post('/api/autorizaciones', payload);
       setShowModal(false);
-      loadAutorizaciones();
+      loadAutorizaciones(1);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr.response?.data?.message || 'Error al crear autorización');
@@ -76,7 +86,7 @@ export default function Autorizaciones() {
   const handleRevocar = async (id: number) => {
     try {
       await api.put(`/api/autorizaciones/${id}/revocar`);
-      loadAutorizaciones();
+      loadAutorizaciones(1);
     } catch { /* ignore */ }
   };
 
@@ -84,7 +94,7 @@ export default function Autorizaciones() {
     if (!confirm('¿Eliminar esta autorización definitivamente?')) return;
     try {
       await api.delete(`/api/autorizaciones/${id}`);
-      loadAutorizaciones();
+      loadAutorizaciones(1);
     } catch { /* ignore */ }
   };
 
@@ -169,6 +179,61 @@ export default function Autorizaciones() {
           </tbody>
         </table>
       </div>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} de {total} autorizaciones
+            </span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                const newSize = Number(e.target.value);
+                setPageSize(newSize);
+                setPage(1);
+                loadAutorizaciones(1, newSize);
+              }}
+              className="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] cursor-pointer"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={15}>15</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadAutorizaciones(page - 1)}
+              disabled={page <= 1}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => loadAutorizaciones(p)}
+                className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${
+                  p === page
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => loadAutorizaciones(page + 1)}
+              disabled={page >= totalPages}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
