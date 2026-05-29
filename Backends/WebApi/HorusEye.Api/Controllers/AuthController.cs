@@ -181,4 +181,81 @@ public class AuthController : ControllerBase
 
         return Ok(ApiResponse<object>.Ok(usersData));
     }
+
+    [HttpPut("users/{id}")]
+    [Authorize(Roles = "Usuario de Gestión")]
+    public async Task<ActionResult<ApiResponse<object>>> UpdateUser(string id, [FromBody] UpdateUserRequest request)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+            return NotFound(ApiResponse<object>.Fail("Usuario no encontrado"));
+
+        user.UserName = request.UserName;
+        user.Email = request.Email;
+
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+            return BadRequest(ApiResponse<object>.Fail(
+                "Error al actualizar usuario",
+                updateResult.Errors.Select(e => e.Description).ToArray()));
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var currentRole = roles.FirstOrDefault();
+
+        if (currentRole != request.Role)
+        {
+            if (currentRole != null)
+                await _userManager.RemoveFromRoleAsync(user, currentRole);
+            await _userManager.AddToRoleAsync(user, request.Role);
+        }
+
+        _logger.LogInformation("Usuario {Id} actualizado por {Admin}", id, User.Identity?.Name);
+
+        return Ok(ApiResponse<object>.Ok(new { user.Id, user.Email, user.UserName, Role = request.Role },
+            "Usuario actualizado exitosamente"));
+    }
+
+    [HttpDelete("users/{id}")]
+    [Authorize(Roles = "Usuario de Gestión")]
+    public async Task<ActionResult<ApiResponse<object>>> DeleteUser(string id)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (currentUserId == id)
+            return BadRequest(ApiResponse<object>.Fail("No puedes eliminar tu propio usuario"));
+
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+            return NotFound(ApiResponse<object>.Fail("Usuario no encontrado"));
+
+        var result = await _userManager.DeleteAsync(user);
+        if (!result.Succeeded)
+            return BadRequest(ApiResponse<object>.Fail(
+                "Error al eliminar usuario",
+                result.Errors.Select(e => e.Description).ToArray()));
+
+        _logger.LogInformation("Usuario {Id} eliminado por {Admin}", id, User.Identity?.Name);
+
+        return Ok(ApiResponse<object>.Ok(null!, "Usuario eliminado exitosamente"));
+    }
+
+    [HttpPost("users/{id}/reset-password")]
+    [Authorize(Roles = "Usuario de Gestión")]
+    public async Task<ActionResult<ApiResponse<object>>> ResetPassword(string id, [FromBody] ResetPasswordRequest request)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+            return NotFound(ApiResponse<object>.Fail("Usuario no encontrado"));
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
+
+        if (!result.Succeeded)
+            return BadRequest(ApiResponse<object>.Fail(
+                "Error al restablecer contraseña",
+                result.Errors.Select(e => e.Description).ToArray()));
+
+        _logger.LogInformation("Contraseña restablecida para usuario {Id} por {Admin}", id, User.Identity?.Name);
+
+        return Ok(ApiResponse<object>.Ok(null!, "Contraseña restablecida exitosamente"));
+    }
 }

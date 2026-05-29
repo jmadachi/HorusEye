@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import api from '../services/api';
-import { signalRService } from '../services/signalR';
+import { useSignalR } from '../hooks/useSignalR';
 import type { KpiData, Movimiento, Tendencia } from '../types';
 import {
   Package, MapPin, Tags, ArrowUpRight, ArrowDownRight, AlertTriangle, Wifi, WifiOff
@@ -16,50 +16,45 @@ export default function Dashboard() {
   const [kpis, setKpis] = useState<KpiData | null>(null);
   const [tendencias, setTendencias] = useState<Tendencia[]>([]);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
-  const [connected, setConnected] = useState(false);
+
+  const kpisRef = useRef(kpis);
+  kpisRef.current = kpis;
+
+  const loadKpis = useCallback(async () => {
+    try {
+      const { data } = await api.get('/api/dashboard/kpis');
+      if (data.success) setKpis(data.data);
+    } catch { /* ignore */ }
+  }, []);
+
+  const loadTendencias = useCallback(async () => {
+    try {
+      const { data } = await api.get('/api/dashboard/tendencias');
+      if (data.success) setTendencias(data.data.dias);
+    } catch { /* ignore */ }
+  }, []);
+
+  const loadMovimientos = useCallback(async () => {
+    try {
+      const { data } = await api.get('/api/movimientos?page=1&pageSize=20');
+      if (data.success) setMovimientos(data.data.items);
+    } catch { /* ignore */ }
+  }, []);
+
+  const onNuevoMovimiento = useCallback((data: unknown) => {
+    const m = data as Movimiento;
+    setMovimientos(prev => [m, ...prev].slice(0, 100));
+    loadKpis();
+    loadTendencias();
+  }, [loadKpis, loadTendencias]);
+
+  const { connected } = useSignalR({ onMovimiento: onNuevoMovimiento });
 
   useEffect(() => {
     loadKpis();
     loadTendencias();
     loadMovimientos();
-    setupSignalR();
-    return () => { signalRService.stopConnection(); };
-  }, []);
-
-  const loadKpis = async () => {
-    try {
-      const { data } = await api.get('/api/dashboard/kpis');
-      if (data.success) setKpis(data.data);
-    } catch { /* ignore */ }
-  };
-
-  const loadTendencias = async () => {
-    try {
-      const { data } = await api.get('/api/dashboard/tendencias');
-      if (data.success) setTendencias(data.data.dias);
-    } catch { /* ignore */ }
-  };
-
-  const loadMovimientos = async () => {
-    try {
-      const { data } = await api.get('/api/movimientos?page=1&pageSize=20');
-      if (data.success) setMovimientos(data.data.items);
-    } catch { /* ignore */ }
-  };
-
-  const setupSignalR = async () => {
-    const connection = signalRService.startConnection();
-    connection.onreconnecting(() => setConnected(false));
-    connection.onreconnected(() => setConnected(true));
-    connection.onclose(() => setConnected(false));
-    connection.on('NuevoMovimiento', (m: Movimiento) => {
-      setMovimientos(prev => [m, ...prev].slice(0, 100));
-      loadKpis();
-      loadTendencias();
-    });
-    try { await signalRService.joinDashboard(); setConnected(true); }
-    catch { setConnected(false); }
-  };
+  }, [loadKpis, loadTendencias, loadMovimientos]);
 
   const kpiCards = kpis ? [
     { label: 'Total Activos', value: kpis.totalActivos, icon: Package, color: 'bg-blue-500' },

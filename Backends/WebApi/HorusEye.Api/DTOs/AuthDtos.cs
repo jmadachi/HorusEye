@@ -42,6 +42,22 @@ public class RecoverPasswordRequest
     public string Email { get; set; } = string.Empty;
 }
 
+public class UpdateUserRequest
+{
+    [Required]
+    public string UserName { get; set; } = string.Empty;
+    [Required, EmailAddress]
+    public string Email { get; set; } = string.Empty;
+    [Required]
+    public string Role { get; set; } = string.Empty;
+}
+
+public class ResetPasswordRequest
+{
+    [Required, MinLength(6)]
+    public string NewPassword { get; set; } = string.Empty;
+}
+
 public class AuthResponse
 {
     public string AccessToken { get; set; } = string.Empty;

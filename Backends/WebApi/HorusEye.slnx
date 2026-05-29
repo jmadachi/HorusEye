@@ -2,4 +2,5 @@
   <Project Path="HorusEye.Api/HorusEye.Api.csproj" />
   <Project Path="HorusEye.Core/HorusEye.Core.csproj" />
   <Project Path="HorusEye.Infrastructure/HorusEye.Infrastructure.csproj" />
+  <Project Path="HorusEye.Tests/HorusEye.Tests.csproj" />
 </Solution>

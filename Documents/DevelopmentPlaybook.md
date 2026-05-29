@@ -1116,4 +1116,323 @@ dotnet ef migrations add NombreDescriptivo \
 
 ---
 
+---
+
+## 15. Mejoras de Calidad de Código (28-Mayo-2026)
+
+### 15.1 DTOs en archivos separados
+
+**Problema:** El DTO `CreateAutorizacionRequest` estaba definido inline al final del archivo `AutorizacionesController.cs`, mezclando responsabilidades de presentación con definiciones de datos. Además, no tenía validación (`[Required]`, `[StringLength]`).
+
+**Solución:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `DTOs/AutorizacionDtos.cs` | **Nuevo:** `CreateAutorizacionRequest` y `AutorizacionResponse` con validación DataAnnotations |
+| `Controllers/AutorizacionesController.cs` | Eliminada definición inline de `CreateAutorizacionRequest`; ahora usa `HorusEye.Api.DTOs.AutorizacionDtos` |
+| `Controllers/AutorizacionesController.cs` | Respuestas tipadas con `AutorizacionResponse` en vez de `List<object>` y `new { }` anónimos |
+
+`CreateAutorizacionRequest` ahora incluye:
+```csharp
+[Required]
+public Guid ActivoId { get; set; }
+
+[Required]
+[StringLength(200, MinimumLength = 1)]
+public string AutorizadoPor { get; set; } = string.Empty;
+
+public DateTimeOffset? FechaVencimiento { get; set; }
+```
+
+### 15.2 Validación de dominios
+
+Se agregaron validaciones con DataAnnotations a todos los DTOs de entrada:
+
+| DTO | Validación agregada |
+|-----|-------------------|
+| `EventoRfidRequest.TipoMovimiento` | `[RegularExpression("^(INGRESO\|SALIDA)$")]` — solo valores válidos del dominio |
+| `CreateAutorizacionRequest.AutorizadoPor` | `[Required]`, `[StringLength(200)]` — no vacío, longitud máxima |
+
+El ecosistema de validación existente incluye:
+
+- **`ActivoRequest.Categoria`** — `[RegularExpression]` con lista cerrada de categorías (Computadores, Monitores, Perifericos, Impresoras, Sillas, Redes, Telefonia, Tablets, Audio, Accesorios, Otros)
+- **`UpdateTagEstadoRequest.Estado`** — `[RegularExpression]` contra valores del enum `EstadoTag`
+- **`RegisterRequest.Email`** — `[EmailAddress]` + `[Required]`
+- **`RegisterRequest.Password`** — `[MinLength(6)]` + `[Required]`
+- **`ResetPasswordRequest.NewPassword`** — `[MinLength(6)]` + `[Required]`
+- **`ReportarDanioRequest.Descripcion`** — `[StringLength(600)]` + `[Required]`
+
+Todas las validaciones son manejadas automáticamente por ASP.NET Core (`[ApiController]` attribute) que retorna 400 Bad Request con los errores en el cuerpo de la respuesta.
+
+### 15.3 Proyecto de tests unitarios
+
+**Nuevo proyecto:** `Backends/WebApi/HorusEye.Tests/` (xUnit + Moq + FluentAssertions + EF Core InMemory)
+
+**Paquetes NuGet agregados:**
+
+| Paquete | Versión | Propósito |
+|---------|---------|-----------|
+| `Moq` | 4.20.72 | Mocking de dependencias (ILogger, etc.) |
+| `FluentAssertions` | 8.10.0 | Assertions legibles y auto-documentadas |
+| `Microsoft.EntityFrameworkCore.InMemory` | 10.0.8 | Base de datos en memoria para tests de integración |
+
+**Tests implementados (25 en total):**
+
+#### TokenServiceTests (6 tests)
+
+| Test | Verifica |
+|------|----------|
+| `GenerateAccessToken_ReturnsValidJwt` | Token JWT con 3 segmentos (header.payload.signature) |
+| `GenerateRefreshToken_ReturnsBase64String` | Token de 64 bytes codificado en Base64 |
+| `CreateRefreshTokenAsync_PersistsToken` | RefreshToken guardado en BD con datos correctos |
+| `ValidateRefreshTokenAsync_ValidToken_ReturnsToken` | Token válido es retornado |
+| `ValidateRefreshTokenAsync_RevokedToken_ReturnsNull` | Token revocado retorna null |
+| `ValidateRefreshTokenAsync_ExpiredToken_ReturnsNull` | Token expirado retorna null |
+
+#### AutorizacionesControllerTests (7 tests)
+
+| Test | Verifica |
+|------|----------|
+| `GetAll_ReturnsList` | GET /api/autorizaciones retorna lista exitosa |
+| `Create_WithValidData_ReturnsCreated` | POST con datos válidos crea autorización activa |
+| `Create_WithInvalidActivo_ReturnsNotFound` | POST con activo inexistente da 404 |
+| `Revoke_SetsActivaToFalse` | PUT revocar cambia Activa a false |
+| `Revoke_WithInvalidId_ReturnsNotFound` | PUT revocar con ID inválido da 404 |
+| `Delete_RemovesAutorizacion` | DELETE elimina el registro de BD |
+| `GetActivas_ReturnsOnlyActive` | GET activas filtra correctamente |
+
+#### DtoValidationTests (12 tests)
+
+| Test | Verifica |
+|------|----------|
+| `CreateAutorizacionRequest_Valid_Passes` | DTO completo sin errores |
+| `CreateAutorizacionRequest_EmptyAutorizadoPor_Fails` | AutorizadoPor vacío falla |
+| `ActivoRequest_InvalidCategoria_Fails` | Categoría inválida falla `[RegularExpression]` |
+| `ActivoRequest_ValidCategoria_Passes` | Categoría válida pasa |
+| `EventoRfidRequest_InvalidTipoMovimiento_Fails` | TipoMovimiento inválido falla |
+| `EventoRfidRequest_ValidTipoMovimiento_Passes` | INGRESO y SALIDA pasan |
+| `UpdateTagEstadoRequest_ValidEstado_Passes` | Estado válido pasa |
+| `UpdateTagEstadoRequest_InvalidEstado_Fails` | Estado inexistente falla |
+| `RegisterRequest_InvalidEmail_Fails` | Email sin @ falla |
+| `RegisterRequest_ShortPassword_Fails` | Password < 6 caracteres falla |
+| `ResetPasswordRequest_ShortPassword_Fails` | Password < 6 caracteres falla |
+| `ResetPasswordRequest_ValidPassword_Passes` | Password ≥ 6 caracteres pasa |
+
+**Ejecución:**
+```bash
+cd Backends/WebApi
+dotnet test
+# Passed: 25, Failed: 0
+```
+
+### 15.4 Frontend — Módulo de Autorización de Salida
+
+Se implementó el módulo de Autorización de Salida que estaba pendiente (req. 8 del análisis César V2):
+
+**Backend:**
+- `Controllers/AutorizacionesController.cs` — CRUD completo con `GET`, `GET /activas`, `POST`, `PUT /{id}/revocar`, `DELETE /{id}`
+- `DTOs/AutorizacionDtos.cs` — DTOs tipados con validación
+
+**Frontend:**
+- `pages/Autorizaciones.tsx` — Nueva página con tabla de autorizaciones, modal de creación, revocación y eliminación
+- `App.tsx` — Nueva ruta `/autorizaciones`
+- `components/Layout.tsx` — Nuevo item de navegación "Autorizaciones" (visible para todos los roles)
+
+### 15.5 Frontend — Mejoras en Usuarios
+
+- `pages/Usuarios.tsx` — Se agregaron columnas de acciones con botones de editar, resetear contraseña y eliminar
+- Se agregaron 3 modales: editar usuario, resetear contraseña, y confirmación de eliminación
+- No permite eliminar el propio usuario (`currentUser?.id !== u.id`)
+
+### 15.6 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `DTOs/AutorizacionDtos.cs` | **Nuevo:** DTOs tipados para autorizaciones |
+| `DTOs/RfidDtos.cs` | Validación `[RegularExpression]` para `TipoMovimiento` |
+| `Controllers/AutorizacionesController.cs` | Usa DTOs del namespace; respuestas tipadas |
+| `Controllers/AutorizacionesController.cs` | Eliminada clase `CreateAutorizacionRequest` inline |
+| `HorusEye.Tests/` | **Nuevo:** proyecto de tests (25 tests, todos pasan) |
+| `HorusEye.Tests/TokenServiceTests.cs` | 6 tests para TokenService |
+| `HorusEye.Tests/AutorizacionesControllerTests.cs` | 7 tests para AutorizacionesController |
+| `HorusEye.Tests/DtoValidationTests.cs` | 12 tests de validación de DTOs |
+| `Frontends/ReactTS/src/pages/Autorizaciones.tsx` | **Nuevo:** página de gestión de autorizaciones |
+| `Frontends/ReactTS/src/pages/Usuarios.tsx` | Edit/delete/reset-password con modales |
+| `Frontends/ReactTS/src/App.tsx` | Ruta `/autorizaciones` |
+| `Frontends/ReactTS/src/components/Layout.tsx` | Nav item "Autorizaciones" |
+
+---
+
+---
+
+## 16. Mejoras de Infraestructura (28-Mayo-2026)
+
+### 16.1 .dockerignore mejorado
+
+Se amplió el `.dockerignore` para excluir del contexto Docker todo lo innecesario en producción:
+
+```
+# .NET
+Backends/WebApi/**/bin/
+Backends/WebApi/**/obj/
+Backends/WebApi/**/*.user
+Backends/WebApi/**/.vs/
+Backends/WebApi/HorusEye.Tests/
+
+# Node
+Frontends/ReactTS/node_modules/
+Frontends/ReactTS/dist/
+Frontends/ReactTS/.pnpm-store/
+
+# Git + GitHub
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+Backends/WebApi/HorusEye.Api/logs/
+*.log
+
+# Scripts + Docs
+prueba.sh
+simulacion*.sh
+Documents/
+
+# Build artifacts
+publish/
+```
+
+Beneficios:
+- **Capa de caché de Docker más pequeña**: Los cambios en tests, docs o scripts no invalidan las capas de restore/build.
+- **Builds más rápidos**: Menos archivos en el contexto de build.
+- **Seguridad**: No se filtran logs, tokens, o scripts internos en la imagen.
+
+### 16.2 CI/CD — GitHub Actions
+
+**Archivo:** `.github/workflows/ci-cd.yml`
+
+Pipeline automatizado con 3 jobs paralelos + deploy secuencial:
+
+```
+                  ┌──────────────────────────┐
+                  │   push / PR a main        │
+                  └────────┬─────────────────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+      ┌────────────┐ ┌────────────┐ ┌────────────┐
+      │  Backend   │ │  Frontend  │ │  Deploy    │
+      │ Build+Test │ │ Build+Lint │ │(solo main) │
+      └────────────┘ └────────────┘ └────────────┘
+              │            │              │
+              └─────┬──────┘              │
+                    ▼                     ▼
+            ┌────────────────┐   ┌────────────────┐
+            │  ✅ Ambos OK   │──►│  Render + Vercel│
+            └────────────────┘   └────────────────┘
+```
+
+**Jobs:**
+
+| Job | Descripción | Steps |
+|-----|-------------|-------|
+| `backend-build-and-test` | Build .NET + ejecutar tests | `setup-dotnet` → `dotnet restore` → `dotnet build` → `dotnet test` |
+| `frontend-build-and-lint` | Build React + lint | `setup-node` → `pnpm install` → `pnpm lint` → `pnpm build` |
+| `deploy` | Desplegar solo en push a main (después de que ambos jobs pasen) | Render deploy hook + Vercel CLI |
+
+**Secrets requeridos en GitHub:**
+
+| Secret | Propósito | Cómo obtenerlo |
+|--------|-----------|---------------|
+| `RENDER_DEPLOY_HOOK` | Trigger de deploy en Render | Render Dashboard → Web Service → Deploy Hook |
+| `RENDER_SERVICE_ID` | ID del servicio en Render | Render Dashboard → URL del servicio |
+| `VERCEL_ORG_ID` | ID de la organización en Vercel | `vercel whoami --scope` |
+| `VERCEL_PROJECT_ID` | ID del proyecto en Vercel | `vercel link` → ver `.vercel/project.json` |
+| `VERCEL_TOKEN` | Token de API de Vercel | Vercel Dashboard → Settings → Tokens |
+
+**Política de concurrencia:** `concurrency.cancel-in-progress: true` — si se hace un nuevo push mientras un pipeline está corriendo, se cancela el anterior para ahorrar recursos.
+
+### 16.3 Scripts de deploy
+
+Se crearon 3 scripts bash ejecutables en `scripts/`:
+
+| Script | Propósito |
+|--------|-----------|
+| `scripts/deploy-backend.sh` | Build .NET + tests + Docker image + push + trigger Render |
+| `scripts/deploy-frontend.sh` | Install deps + lint + build + deploy Vercel CLI |
+| `scripts/deploy-all.sh` | Pipeline completa: backend + frontend + ambos deploys |
+| `scripts/health-check.sh` | Verifica estado de todos los endpoints (sin autenticación y autenticados) |
+
+**Uso:**
+```bash
+# Deploy completo (requiere variables de entorno)
+export RENDER_DEPLOY_HOOK="<hook-url>"
+export VERCEL_TOKEN="<token>"
+./scripts/deploy-all.sh
+
+# Solo build (para validar sin desplegar)
+./scripts/deploy-backend.sh --no-push
+./scripts/deploy-frontend.sh --no-deploy
+
+# Verificar estado de producción
+./scripts/health-check.sh
+```
+
+### 16.4 render.yaml mejorado
+
+Se actualizó `render.yaml` con:
+
+| Cambio | Antes | Después |
+|--------|-------|---------|
+| `healthCheckPath` | No existía | `/api/auth/login` — Render monitorea la salud del servicio |
+| `autoDeploy` | No existía | `true` — despliegue automático en cada push a main |
+| `branch` | No existía | `main` — explícito sobre qué rama desplegar |
+| Connection string | Hardcodeada en el YAML | `fromDatabase` + `property: connectionString` — Render inyecta automáticamente |
+
+El `healthCheckPath` permite que Render detecte si la API está funcionando correctamente. Si la ruta responde HTTP 200, el servicio se considera saludable. Caso contrario, Render reinicia el contenedor automáticamente.
+
+### 16.5 Flujo de trabajo recomendado
+
+**Desarrollo local:**
+```bash
+# 1. Backend
+cd Backends/WebApi
+dotnet test                              # Ejecutar tests
+dotnet run --project HorusEye.Api        # Iniciar API
+
+# 2. Frontend
+cd Frontends/ReactTS
+pnpm dev                                 # Iniciar dev server
+```
+
+**Antes de hacer push:**
+```bash
+# Validar localmente (sin desplegar)
+./scripts/deploy-backend.sh --no-push    # Build + tests backend
+./scripts/deploy-frontend.sh --no-deploy # Build + lint frontend
+```
+
+**Despliegue a producción:**
+1. Hacer push a `main` → GitHub Actions ejecuta CI/CD automáticamente.
+2. O manualmente: `./scripts/deploy-all.sh` (requiere tokens configurados).
+
+### 16.6 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `.dockerignore` | Ampliado: logs, tests, .github, scripts, .pnpm-store, publish |
+| `.github/workflows/ci-cd.yml` | **Nuevo:** pipeline CI/CD completo |
+| `scripts/deploy-backend.sh` | **Nuevo:** build + test + docker + deploy backend |
+| `scripts/deploy-frontend.sh` | **Nuevo:** build + lint + deploy frontend |
+| `scripts/deploy-all.sh` | **Nuevo:** pipeline completa local |
+| `scripts/health-check.sh` | **Nuevo:** verificación de endpoints en producción |
+| `render.yaml` | `healthCheckPath`, `autoDeploy`, `branch`, `fromDatabase` connection string |
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*

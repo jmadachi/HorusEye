@@ -8,6 +8,8 @@ public class EventoRfidRequest
     public string TagId { get; set; } = string.Empty;
     public string? PuntoLecturaId { get; set; }
     [Required]
+    [RegularExpression("^(INGRESO|SALIDA)$",
+        ErrorMessage = "TipoMovimiento debe ser INGRESO o SALIDA")]
     public string TipoMovimiento { get; set; } = string.Empty;
 }
 

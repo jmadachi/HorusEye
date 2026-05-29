@@ -9,6 +9,7 @@ import Activos from './pages/Activos';
 import TagsPage from './pages/Tags';
 import Reportes from './pages/Reportes';
 import Usuarios from './pages/Usuarios';
+import Autorizaciones from './pages/Autorizaciones';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route path="/tags" element={<TagsPage />} />
             <Route path="/reportes" element={<Reportes />} />
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/autorizaciones" element={<Autorizaciones />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

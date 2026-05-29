@@ -1,10 +1,16 @@
 # .NET
 Backends/WebApi/**/bin/
 Backends/WebApi/**/obj/
+Backends/WebApi/**/*.user
+Backends/WebApi/**/.vs/
+
+# .NET Tests
+Backends/WebApi/HorusEye.Tests/
 
 # Node
 Frontends/ReactTS/node_modules/
 Frontends/ReactTS/dist/
+Frontends/ReactTS/.pnpm-store/
 
 # Docker
 Databases/PostgreSQL/data/
@@ -12,14 +18,20 @@ Databases/PostgreSQL/data/
 # Git
 .git/
 .gitignore
+.gitattributes
+
+# GitHub
+.github/
 
 # IDE
 .idea/
 .vscode/
+*.sublime-*
 
 # Env
 .env
 *.local
+.env.example
 
 # Docs
 Documents/
@@ -27,3 +39,16 @@ Documents/
 # OS
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+
+# Logs
+Backends/WebApi/HorusEye.Api/logs/
+*.log
+
+# Scripts
+prueba.sh
+simulacion*.sh
+
+# Publish artifacts
+publish/

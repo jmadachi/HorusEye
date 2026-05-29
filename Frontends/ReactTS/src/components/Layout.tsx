@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
-  LayoutDashboard, Package, Tags, FileText, LogOut, Menu, X, Eye, Shield, Users, Sun, Moon
+  LayoutDashboard, Package, Tags, FileText, LogOut, Menu, X, Eye, Shield, Users, Sun, Moon, ShieldCheck
 } from 'lucide-react';
 
 export default function Layout() {
@@ -17,6 +17,7 @@ export default function Layout() {
     { to: '/activos', label: 'Activos', icon: Package },
     { to: '/tags', label: 'Tags RFID', icon: Tags },
     { to: '/reportes', label: 'Reportes', icon: FileText },
+    { to: '/autorizaciones', label: 'Autorizaciones', icon: ShieldCheck },
     ...(hasRole('Usuario de Gestión')
       ? [{ to: '/usuarios', label: 'Usuarios', icon: Users }]
       : [])

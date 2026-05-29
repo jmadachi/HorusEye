@@ -3,11 +3,16 @@ services:
     name: horuseye-api
     runtime: docker
     plan: free
+    branch: main
+    healthCheckPath: /api/auth/login
+    autoDeploy: true
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__DefaultConnection
-        value: Host=dpg-d8c5nau7r5hc7394c4dg-a;Port=5432;Database=horuseyedb;Username=horuseyeuser;Password=mrHb3sSNsvcsFAYHKU5Wn9R6U2AjF6Iq
+        fromDatabase:
+          name: horuseye-db
+          property: connectionString
       - key: Jwt__Key
         sync: false
       - key: Jwt__Issuer
