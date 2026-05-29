@@ -1929,4 +1929,38 @@ Uso: bash Documents/simulacion-autorizaciones.sh
 
 ---
 
+## 23. Paginación de Usuarios (29-Mayo-2026)
+
+Se implementó paginación en `GET /api/auth/users` con los mismos parámetros que los demás endpoints paginados (`page`, `pageSize`, default 50).
+
+### 23.1 Backend
+
+**Archivo:** `Backends/WebApi/HorusEye.Api/Controllers/AuthController.cs`
+
+| Cambio | Descripción |
+|--------|-------------|
+| `GetUsers()` | Acepta `[FromQuery] int page = 1, [FromQuery] int pageSize = 50` |
+| Respuesta | Retorna `{ Items, Total, Page, PageSize }` envuelto en `ApiResponse` |
+| Ordenamiento | `OrderBy(u => u.UserName)` para consistencia entre páginas |
+
+### 23.2 Frontend
+
+**Archivo:** `Frontends/ReactTS/src/pages/Usuarios.tsx`
+
+| Cambio | Descripción |
+|--------|-------------|
+| Estados | `page`, `total`, `pageSize` (default 15), `totalPages` calculado |
+| `loadUsers(p?, ps?)` | Acepta parámetros opcionales para evitar closure stale |
+| Mutaciones | `register`/`edit`/`delete` navegan a página 1 tras éxito |
+| Selector items/página | `<select>` con opciones 5/10/15/25/50 |
+| Navegación | Botones anterior/siguiente + números de página |
+
+### 23.3 Endpoints
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| GET | `/api/auth/users?page=1&pageSize=50` | Gestión | Listar usuarios paginados |
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*

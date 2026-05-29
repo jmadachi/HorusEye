@@ -162,9 +162,17 @@ public class AuthController : ControllerBase
 
     [HttpGet("users")]
     [Authorize(Roles = "Usuario de Gestión")]
-    public async Task<ActionResult<ApiResponse<object>>> GetUsers()
+    public async Task<ActionResult<ApiResponse<object>>> GetUsers(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
-        var users = await _userManager.Users.ToListAsync();
+        var query = _userManager.Users.OrderBy(u => u.UserName);
+
+        var total = await query.CountAsync();
+        var users = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
         var usersData = new List<object>();
 
         foreach (var user in users)
@@ -179,7 +187,13 @@ public class AuthController : ControllerBase
             });
         }
 
-        return Ok(ApiResponse<object>.Ok(usersData));
+        return Ok(ApiResponse<object>.Ok(new
+        {
+            Items = usersData,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        }));
     }
 
     [HttpPut("users/{id}")]

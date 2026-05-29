@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, X, Pencil, Trash2, KeyRound } from 'lucide-react';
+import { Plus, X, Pencil, Trash2, KeyRound, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface User {
   id: string;
@@ -19,18 +19,28 @@ export default function Usuarios() {
   const [form, setForm] = useState({ email: '', password: '', userName: '', role: 'Usuario de Consulta' });
   const [resetPassword, setResetPassword] = useState('');
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(15);
+  const totalPages = Math.ceil(total / pageSize);
   const { hasRole, user: currentUser } = useAuth();
 
-  const loadUsers = async () => {
+  const loadUsers = async (p?: number, ps?: number) => {
     try {
-      const { data } = await api.get('/api/auth/users');
-      if (data.success) setUsers(data.data);
+      const currentPage = p ?? page;
+      const currentSize = ps ?? pageSize;
+      const { data } = await api.get(`/api/auth/users?page=${currentPage}&pageSize=${currentSize}`);
+      if (data.success) {
+        setUsers(data.data.items);
+        setTotal(data.data.total);
+        setPage(data.data.page);
+      }
     } catch { /* ignore */ }
   };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadUsers();
+    loadUsers(1);
   }, []);
 
   const openRegister = () => {
@@ -59,7 +69,7 @@ export default function Usuarios() {
     try {
       await api.post('/api/auth/register', form);
       setModalType(null);
-      loadUsers();
+      loadUsers(1);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr.response?.data?.message || 'Error al registrar usuario');
@@ -76,7 +86,7 @@ export default function Usuarios() {
         role: form.role
       });
       setModalType(null);
-      loadUsers();
+      loadUsers(1);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr.response?.data?.message || 'Error al actualizar usuario');
@@ -101,7 +111,7 @@ export default function Usuarios() {
     if (!confirm(`¿Eliminar usuario "${u.userName}" (${u.email})?`)) return;
     try {
       await api.delete(`/api/auth/users/${u.id}`);
-      loadUsers();
+      loadUsers(1);
     } catch { /* ignore */ }
   };
 
@@ -169,6 +179,61 @@ export default function Usuarios() {
           </tbody>
         </table>
       </div>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} de {total} usuarios
+            </span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                const newSize = Number(e.target.value);
+                setPageSize(newSize);
+                setPage(1);
+                loadUsers(1, newSize);
+              }}
+              className="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] cursor-pointer"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={15}>15</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadUsers(page - 1)}
+              disabled={page <= 1}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => loadUsers(p)}
+                className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${
+                  p === page
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => loadUsers(page + 1)}
+              disabled={page >= totalPages}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Register Modal */}
       {modalType === 'register' && <UserFormModal
