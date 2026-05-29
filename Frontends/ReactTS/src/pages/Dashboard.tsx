@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { useSignalR } from '../hooks/useSignalR';
 import type { KpiData, Movimiento, Tendencia } from '../types';
@@ -16,9 +16,6 @@ export default function Dashboard() {
   const [kpis, setKpis] = useState<KpiData | null>(null);
   const [tendencias, setTendencias] = useState<Tendencia[]>([]);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
-
-  const kpisRef = useRef(kpis);
-  kpisRef.current = kpis;
 
   const loadKpis = useCallback(async () => {
     try {
@@ -51,6 +48,7 @@ export default function Dashboard() {
   const { connected } = useSignalR({ onMovimiento: onNuevoMovimiento });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadKpis();
     loadTendencias();
     loadMovimientos();
@@ -127,7 +125,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100}
-                paddingAngle={4} dataKey="value" label={({ name, percent }: any) =>
+                paddingAngle={4} dataKey="value" label={({ name, percent }: { name?: string; percent?: number }) =>
                   `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                 {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
               </Pie>

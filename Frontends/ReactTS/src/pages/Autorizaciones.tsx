@@ -24,11 +24,6 @@ export default function Autorizaciones() {
   const { hasRole } = useAuth();
   const isGestion = hasRole('Usuario de Gestión');
 
-  useEffect(() => {
-    loadAutorizaciones();
-    loadActivos();
-  }, []);
-
   const loadAutorizaciones = async () => {
     try {
       const { data } = await api.get('/api/autorizaciones');
@@ -42,6 +37,12 @@ export default function Autorizaciones() {
       if (data.success) setActivos(data.data);
     } catch { /* ignore */ }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadAutorizaciones();
+    loadActivos();
+  }, []);
 
   const openCreate = () => {
     setForm({ activoId: '', autorizadoPor: '', fechaVencimiento: '' });

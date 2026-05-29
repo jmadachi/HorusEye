@@ -12,12 +12,15 @@ export default function TagsPage() {
   const { hasRole } = useAuth();
   const isGestion = hasRole('Usuario de Gestión');
 
-  useEffect(() => { loadTags(); }, []);
-
   const loadTags = async () => {
     const { data } = await api.get('/api/tags');
     if (data.success) setTags(data.data);
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTags();
+  }, []);
 
   const registerTag = async () => {
     try {

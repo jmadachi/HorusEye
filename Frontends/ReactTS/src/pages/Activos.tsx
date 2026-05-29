@@ -14,11 +14,6 @@ export default function Activos() {
   const { hasRole } = useAuth();
   const isGestion = hasRole('Usuario de Gestión');
 
-  useEffect(() => {
-    loadActivos();
-    loadTags();
-  }, []);
-
   const loadActivos = async () => {
     const { data } = await api.get('/api/activos');
     if (data.success) setActivos(data.data);
@@ -28,6 +23,12 @@ export default function Activos() {
     const { data } = await api.get('/api/tags/disponibles');
     if (data.success) setTags(data.data);
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadActivos();
+    loadTags();
+  }, []);
 
   const openCreate = () => {
     setEditing(null);

@@ -41,6 +41,7 @@ export function useSignalR({ onMovimiento }: UseSignalROptions = {}) {
       connection.stop();
       connectionRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const reiniciar = useCallback(async () => {

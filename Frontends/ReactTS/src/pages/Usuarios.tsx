@@ -21,14 +21,17 @@ export default function Usuarios() {
   const [error, setError] = useState('');
   const { hasRole, user: currentUser } = useAuth();
 
-  useEffect(() => { loadUsers(); }, []);
-
   const loadUsers = async () => {
     try {
       const { data } = await api.get('/api/auth/users');
       if (data.success) setUsers(data.data);
     } catch { /* ignore */ }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadUsers();
+  }, []);
 
   const openRegister = () => {
     setSelectedUser(null);

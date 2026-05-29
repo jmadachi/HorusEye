@@ -9,10 +9,10 @@ const TIPOS_REPORTE = ['Movimientos', 'Tags Registrados', 'Activos Dentro', 'Act
 export default function Reportes() {
   const [tipoReporte, setTipoReporte] = useState('Movimientos');
   const [fechaInicio, setFechaInicio] = useState(
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    () => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [fechaFin, setFechaFin] = useState(
-    new Date().toISOString().split('T')[0]
+    () => new Date().toISOString().split('T')[0]
   );
   const [resultados, setResultados] = useState<unknown[] | null>(null);
   const [loading, setLoading] = useState(false);
