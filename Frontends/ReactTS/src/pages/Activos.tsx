@@ -13,14 +13,15 @@ export default function Activos() {
   const [form, setForm] = useState({ placa: '', nombre: '', categoria: '', tenedorResponsable: '', tagId: '' });
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.ceil(total / pageSize);
   const { hasRole } = useAuth();
   const isGestion = hasRole('Usuario de Gestión');
 
-  const loadActivos = async (p?: number) => {
+  const loadActivos = async (p?: number, ps?: number) => {
     const currentPage = p ?? page;
-    const { data } = await api.get(`/api/activos?page=${currentPage}&pageSize=${pageSize}`);
+    const currentSize = ps ?? pageSize;
+    const { data } = await api.get(`/api/activos?page=${currentPage}&pageSize=${currentSize}`);
     if (data.success) {
       setActivos(data.data.items);
       setTotal(data.data.total);
@@ -148,9 +149,27 @@ export default function Activos() {
 
       {total > 0 && (
         <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} de {total} activos
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} de {total} activos
+            </span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                const newSize = Number(e.target.value);
+                setPageSize(newSize);
+                setPage(1);
+                loadActivos(1, newSize);
+              }}
+              className="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] cursor-pointer"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={15}>15</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => loadActivos(page - 1)}

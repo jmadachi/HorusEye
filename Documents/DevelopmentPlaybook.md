@@ -1765,4 +1765,65 @@ Se agregó el mismo componente de paginación debajo de la tabla con:
 
 ---
 
+## 20. Selector de Ítems por Página (29-Mayo-2026)
+
+### 20.1 Motivación
+
+Las tablas de Activos y Tags RFID tenían un tamaño de página fijo (10 y 15 respectivamente). Los usuarios no podían ajustar cuántos registros ver por página, lo que resultaba incómodo para quienes preferían ver más registros de una sola vez o una vista más compacta.
+
+### 20.2 Cambios en el Frontend
+
+Se agregó un selector `<select>` en la barra de paginación de ambos componentes que permite escoger entre 5, 10, 15, 25 o 50 ítems por página.
+
+**Archivos modificados:**
+- `Frontends/ReactTS/src/pages/Activos.tsx`
+- `Frontends/ReactTS/src/pages/Tags.tsx`
+
+**Cambio en el estado:** `pageSize` pasó de ser una constante a un estado React:
+
+```typescript
+// Antes (fijo):
+const pageSize = 10;    // Activos
+const pageSize = 15;    // Tags
+
+// Después (dinámico):
+const [pageSize, setPageSize] = useState(10);   // Activos
+const [pageSize, setPageSize] = useState(15);   // Tags
+```
+
+**Selector agregado en la barra de paginación:**
+
+```tsx
+<select
+  value={pageSize}
+  onChange={(e) => {
+    const newSize = Number(e.target.value);
+    setPageSize(newSize);
+    setPage(1);
+    loadActivos(1, newSize);  // loadTags(1, newSize) en Tags
+  }}
+>
+  <option value={5}>5</option>
+  <option value={10}>10</option>
+  <option value={15}>15</option>
+  <option value={25}>25</option>
+  <option value={50}>50</option>
+</select>
+```
+
+**Consideraciones técnicas:**
+
+- Al cambiar el tamaño de página, se reinicia a la página 1 para evitar mostrar una página vacía.
+- Se pasó el nuevo tamaño como parámetro explícito (`newSize`) a la función `loadActivos`/`loadTags` para evitar el closure stale, ya que `setPageSize` es asíncrono.
+- Las funciones `loadActivos` y `loadTags` ahora aceptan un segundo parámetro opcional `ps?: number` para el tamaño de página.
+
+### 20.3 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `Frontends/ReactTS/src/pages/Activos.tsx` | `pageSize` como estado React; `<select>` con opciones 5/10/15/25/50; reinicio a página 1 al cambiar |
+| `Frontends/ReactTS/src/pages/Tags.tsx` | `pageSize` como estado React; `<select>` con opciones 5/10/15/25/50; reinicio a página 1 al cambiar |
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*
