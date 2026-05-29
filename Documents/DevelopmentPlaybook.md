@@ -942,4 +942,178 @@ options.AddPolicy("AllowFrontend", policy =>
 
 ---
 
+## 13. Mejoras de Seguridad y Calidad (28-Mayo-2026)
+
+### 13.1 JWT Secret removido de `appsettings.json`
+
+**Problema:** La clave de firma JWT `HorusEyeSuperSecretKey2026!@#$%^&*()VeryLongSecure` estaba hardcodeada en `appsettings.json` y commiteada en el repositorio. Si alguien accedía al repo, podía firmar tokens arbitrarios.
+
+**Solución:**
+- Remover `Jwt:Key` de `appsettings.json` (solo quedan `Issuer` y `Audience`).
+- Agregar `Jwt:Key` únicamente en `appsettings.Development.json` con un valor diferente (`DevKey-NotForProduction-...`).
+- En producción, Render inyecta `Jwt__Key` como variable de entorno.
+- En `Program.cs`, si `Jwt:Key` no está configurado, la aplicación falla al inicio con mensaje claro:
+
+```csharp
+var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException(
+    "Jwt:Key no configurada...");
+```
+
+### 13.2 DTOs con validación para TagsController
+
+**Problema:** Los endpoints `POST /api/tags`, `PUT /api/tags/{id}/estado` y `POST /api/tags/{id}/reportar-danio` aceptaban strings planos (`[FromBody] string`) sin validación estructurada. Esto dificultaba la documentación Swagger y la validación automática.
+
+**Solución:** Crear `TagDtos.cs` con tres DTOs tipados y validados:
+
+| DTO | Validaciones |
+|-----|-------------|
+| `CreateTagRequest` | `[Required]`, `[StringLength(200)]` |
+| `UpdateTagEstadoRequest` | `[Required]`, `[RegularExpression]` contra valores del enum |
+| `ReportarDanioRequest` | `[Required]`, `[StringLength(600)]` |
+
+Actualizar controlador, frontend (`Tags.tsx`) y scripts de simulación para usar los nuevos formatos.
+
+### 13.3 ChangePassword sin email en body
+
+**Problema:** `ChangePasswordRequest` requería `Email` en el body, pero el usuario ya está autenticado vía JWT. Adicionalmente se comparaba contra el claim, lo cual era redundante.
+
+**Solución:** Remover `Email` del DTO. El controlador obtiene el `UserId` directamente del token JWT:
+
+```csharp
+var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+```
+
+### 13.4 Validación de categoría en Activos
+
+**Problema:** `ActivoRequest.Categoria` solo tenía `[Required]`, permitiendo valores arbitrarios.
+
+**Solución:** Agregar `[RegularExpression]` con las categorías válidas del dominio:
+
+```csharp
+[RegularExpression("^(Computadores|Monitores|Perifericos|Impresoras|Sillas|Redes|Telefonia|Tablets|Audio|Accesorios|Otros)$")]
+```
+
+### 13.5 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `appsettings.json` | Removido `Jwt:Key` del source control |
+| `appsettings.Development.json` | Agregado `Jwt:Key` para desarrollo local |
+| `Program.cs` | Validación de `Jwt:Key` requerido al iniciar |
+| `DTOs/TagDtos.cs` | Nuevo: DTOs con validación para Tags |
+| `DTOs/AuthDtos.cs` | `ChangePasswordRequest` sin campo `Email` |
+| `DTOs/RfidDtos.cs` | `ActivoRequest.Categoria` con `[RegularExpression]` |
+| `Controllers/TagsController.cs` | Usa DTOs tipados en vez de strings planos |
+| `Controllers/AuthController.cs` | ChangePassword obtiene usuario del JWT |
+| `Frontends/ReactTS/src/pages/Tags.tsx` | Envía objetos en vez de strings planos |
+| `Documents/simulacion.sh` | Actualizado a nuevo formato de DTOs |
+| `simulacion-prod.sh` | Nuevo: simulación para producción |
+| `simulacion-prod-full.sh` | Nuevo: simulación completa (10 tags + 8 activos + 6 movs) |
+| `simulacion-100.sh` | Nuevo: simulación masiva (100 tags + 100 activos + 30 movs) |
+
+---
+
+## 14. Migración a EF Core Migrations (28-Mayo-2026)
+
+### 14.1 Problema
+
+El proyecto usaba `context.Database.EnsureCreated()` en `Program.cs` para crear el esquema de base de datos. Esta estrategia tiene limitaciones graves:
+
+- **Sin historial de cambios:** No existe una tabla `__EFMigrationsHistory` que registre qué versiones del esquema se han aplicado.
+- **Sin control de versiones:** No se pueden generar scripts SQL para actualizar bases de datos existentes. Para modificar el esquema, habría que hacerlo manualmente.
+- **Riesgo en producción:** Si el esquema cambia (nuevas columnas, tablas), no hay forma de actualizar la BD sin borrar y recrear todos los datos.
+
+### 14.2 Solución
+
+Se creó una migración inicial (`InitialCreate`) usando el CLI de EF Core y se reemplazó `EnsureCreated()` por `Database.Migrate()`.
+
+### 14.3 Migración Inicial
+
+```bash
+# Instalar herramienta global de EF Core
+dotnet tool install --global dotnet-ef
+
+# Crear migración inicial desde el modelo del DbContext
+cd Backends/WebApi
+dotnet ef migrations add InitialCreate \
+  --project HorusEye.Infrastructure \
+  --startup-project HorusEye.Api
+```
+
+La migración genera 6 tablas de negocio + 7 tablas de ASP.NET Identity:
+
+| Tabla | Propósito |
+|-------|-----------|
+| `Tags` | Tags RFID (EPC/UID) con estado |
+| `TagsDaniosHistorial` | Historial de daños reportados |
+| `Activos` | Equipos/items con placa y categoría |
+| `Movimientos` | Registro de ingresos/salidas |
+| `AutorizacionesSalida` | Autorizaciones temporales |
+| `RefreshTokens` | Tokens OAuth 2.0 para renovación JWT |
+| `AspNet*` (7) | ASP.NET Core Identity estándar |
+
+Además se generó:
+
+| Archivo | Propósito |
+|---------|-----------|
+| `Migrations/20260529030543_InitialCreate.cs` | Código C# de la migración (Up/Down) |
+| `Migrations/HorusEyeDbContextModelSnapshot.cs` | Snapshot del modelo actual |
+| `Migrations/InitialCreate.sql` | Script SQL equivalentemente (idempotente) |
+
+### 14.4 Cambio en Program.cs
+
+```csharp
+// ANTES (sin control de versiones):
+context.Database.EnsureCreated();
+
+// DESPUÉS (con migraciones):
+try
+{
+    await context.Database.MigrateAsync();
+}
+catch
+{
+    // Transición desde EnsureCreated(): tablas ya existen pero falta
+    // __EFMigrationsHistory. Se inserta el registro manualmente.
+    context.Database.EnsureCreated();
+    await context.Database.ExecuteSqlRawAsync(
+        "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") " +
+        "VALUES ('20260529030543_InitialCreate', '10.0.0')");
+}
+```
+
+El `try-catch` maneja la transición para bases de datos existentes creadas con `EnsureCreated()`. En la primera ejecución:
+1. `MigrateAsync()` falla porque `__EFMigrationsHistory` no existe.
+2. `EnsureCreated()` detecta tablas existentes y no hace nada.
+3. Se inserta el registro en `__EFMigrationsHistory`.
+4. En adelante, `MigrateAsync()` funciona correctamente y se pueden agregar nuevas migraciones.
+
+Para bases de datos nuevas, `MigrateAsync()` ejecuta toda la migración desde cero sin problemas.
+
+### 14.5 Flujo de trabajo para futuros cambios de esquema
+
+```bash
+# 1. Modificar las entidades en HorusEye.Core/Entities/
+# 2. Crear nueva migración
+dotnet ef migrations add NombreDescriptivo \
+  --project HorusEye.Infrastructure \
+  --startup-project HorusEye.Api
+
+# 3. Revisar el código generado en Migrations/
+# 4. La migración se aplica automáticamente al iniciar la app
+```
+
+### 14.6 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `Program.cs` | `EnsureCreated()` → `MigrateAsync()` con transición |
+| `HorusEye.Infrastructure/Migrations/InitialCreate.cs` | Nuevo: migración inicial |
+| `HorusEye.Infrastructure/Migrations/InitialCreate.Designer.cs` | Nuevo: código generado |
+| `HorusEye.Infrastructure/Migrations/HorusEyeDbContextModelSnapshot.cs` | Nuevo: snapshot del modelo |
+| `HorusEye.Infrastructure/Migrations/InitialCreate.sql` | Nuevo: script SQL idempotente |
+| `Databases/PostgreSQL/init.sql` | Mantenido para referencia local, pero el schema lo gestiona EF Migrations |
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*

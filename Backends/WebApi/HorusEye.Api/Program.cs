@@ -126,7 +126,18 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<HorusEyeDbContext>();
-    context.Database.EnsureCreated();
+
+    try
+    {
+        await context.Database.MigrateAsync();
+    }
+    catch
+    {
+        context.Database.EnsureCreated();
+        await context.Database.ExecuteSqlRawAsync(
+            "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") " +
+            "VALUES ('20260529030543_InitialCreate', '10.0.0')");
+    }
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
