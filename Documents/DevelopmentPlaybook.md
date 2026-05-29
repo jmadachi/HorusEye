@@ -36,8 +36,14 @@
 11. [Infraestructura de Despliegue](#11-infraestructura-de-despliegue)
    - [11.1 Arquitectura](#111-arquitectura)
    - [11.2 Archivos de Configuración Creados](#112-archivos-de-configuración-creados)
-   - [11.3 Paso a Paso — Vercel (Frontend)](#113-paso-a-paso--vercel-frontend)
-   - [11.4 Paso a Paso — Render (Backend + BD)](#114-paso-a-paso--render-backend--bd)
+    - [11.3 Paso a Paso — Vercel (Frontend)](#113-paso-a-paso--vercel-frontend)
+    - [11.4 Paso a Paso — Render (Backend + BD)](#114-paso-a-paso--render-backend--bd)
+12. [Correcciones de Despliegue (28-Mayo-2026)](#12-correcciones-de-despliegue-28-mayo-2026)
+13. [Mejoras de Seguridad y Calidad (28-Mayo-2026)](#13-mejoras-de-seguridad-y-calidad-28-mayo-2026)
+14. [Migración a EF Core Migrations (28-Mayo-2026)](#14-migración-a-ef-core-migrations-28-mayo-2026)
+15. [Mejoras de Calidad de Código (28-Mayo-2026)](#15-mejoras-de-calidad-de-código-28-mayo-2026)
+16. [Mejoras de Infraestructura (28-Mayo-2026)](#16-mejoras-de-infraestructura-28-mayo-2026)
+17. [Resolución de Errores de Lint y Mejoras de CI/CD (29-Mayo-2026)](#17-resolución-de-errores-de-lint-y-mejoras-de-cicd-29-mayo-2026)
 
 ---
 
@@ -813,6 +819,7 @@ Las recomendaciones operativas y funcionales están prácticamente todas impleme
 |---------|-----------|
 | `Backends/WebApi/Dockerfile` | Multi-stage build de .NET 10 para Render |
 | `Backends/WebApi/.dockerignore` | Excluye bin/obj/node_modules del contexto Docker |
+| `Backends/WebApi/HorusEye.Api/Controllers/HealthController.cs` | Endpoint `GET /health` para health checks de Render |
 | `Frontends/ReactTS/vercel.json` | Configuración Vercel con SPA rewrites |
 | `Frontends/ReactTS/.env.example` | Ejemplo de variable `VITE_API_URL` para producción |
 | `render.yaml` | Blueprint de Render (servicio web + BD PostgreSQL) |
@@ -1343,17 +1350,16 @@ Pipeline automatizado con 3 jobs paralelos + deploy secuencial:
 |-----|-------------|-------|
 | `backend-build-and-test` | Build .NET + ejecutar tests | `setup-dotnet` → `dotnet restore` → `dotnet build` → `dotnet test` |
 | `frontend-build-and-lint` | Build React + lint | `setup-node` → `pnpm install` → `pnpm lint` → `pnpm build` |
-| `deploy` | Desplegar solo en push a main (después de que ambos jobs pasen) | Render deploy hook + Vercel CLI |
+| `deploy` | Desplegar solo en push a main (después de que ambos jobs pasen) | `curl` a Render Deploy Hook + `curl` a Vercel Deploy Hook |
 
 **Secrets requeridos en GitHub:**
 
 | Secret | Propósito | Cómo obtenerlo |
 |--------|-----------|---------------|
-| `RENDER_DEPLOY_HOOK` | Trigger de deploy en Render | Render Dashboard → Web Service → Deploy Hook |
-| `RENDER_SERVICE_ID` | ID del servicio en Render | Render Dashboard → URL del servicio |
-| `VERCEL_ORG_ID` | ID de la organización en Vercel | `vercel whoami --scope` |
-| `VERCEL_PROJECT_ID` | ID del proyecto en Vercel | `vercel link` → ver `.vercel/project.json` |
-| `VERCEL_TOKEN` | Token de API de Vercel | Vercel Dashboard → Settings → Tokens |
+| `RENDER_DEPLOY_HOOK_URL` | Deploy hook URL de Render | Render Dashboard → Web Service → Settings → Deploy Hooks → copiar URL |
+| `VERCEL_DEPLOY_HOOK_URL` | Deploy hook URL de Vercel | Vercel Dashboard → Proyecto → Settings → Git → Deploy Hooks → crear y copiar URL |
+
+> **Nota:** El deploy job ya no necesita checkout del repo ni CLI de Vercel — ambos deploys usan un simple `curl -X POST` al deploy hook correspondiente. El build corre en la infraestructura de cada plataforma.
 
 **Política de concurrencia:** `concurrency.cancel-in-progress: true` — si se hace un nuevo push mientras un pipeline está corriendo, se cancela el anterior para ahorrar recursos.
 
@@ -1389,12 +1395,13 @@ Se actualizó `render.yaml` con:
 
 | Cambio | Antes | Después |
 |--------|-------|---------|
-| `healthCheckPath` | No existía | `/api/auth/login` — Render monitorea la salud del servicio |
+| `healthCheckPath` | No existía | `/health` — endpoint dedicado que retorna HTTP 200 |
 | `autoDeploy` | No existía | `true` — despliegue automático en cada push a main |
 | `branch` | No existía | `main` — explícito sobre qué rama desplegar |
 | Connection string | Hardcodeada en el YAML | `fromDatabase` + `property: connectionString` — Render inyecta automáticamente |
+| `CORS__AllowedOrigin` | No existía | `https://horuseye.vercel.app` — CORS restringido al frontend |
 
-El `healthCheckPath` permite que Render detecte si la API está funcionando correctamente. Si la ruta responde HTTP 200, el servicio se considera saludable. Caso contrario, Render reinicia el contenedor automáticamente.
+El `healthCheckPath: /health` apunta al `HealthController` que retorna `{ status: "healthy" }` con HTTP 200. Render usa esta ruta para monitorear la salud del servicio; si no responde 2xx, Render reinicia el contenedor automáticamente.
 
 ### 16.5 Flujo de trabajo recomendado
 
@@ -1432,6 +1439,108 @@ pnpm dev                                 # Iniciar dev server
 | `scripts/deploy-all.sh` | **Nuevo:** pipeline completa local |
 | `scripts/health-check.sh` | **Nuevo:** verificación de endpoints en producción |
 | `render.yaml` | `healthCheckPath`, `autoDeploy`, `branch`, `fromDatabase` connection string |
+
+---
+
+## 17. Resolución de Errores de Lint y Mejoras de CI/CD (29-Mayo-2026)
+
+### 17.1 Problema — Pipeline de CI/CD fallaba por lint
+
+El job `Frontend — Build & Lint` del pipeline de GitHub Actions fallaba con 13 errores de ESLint, impidiendo que el job `Deploy` siquiera se ejecutara.
+
+**Errores encontrados (13 en 9 archivos):**
+
+| Regla | Archivos afectados | Descripción |
+|-------|-------------------|-------------|
+| `react-hooks/set-state-in-effect` | Activos, Autorizaciones, Dashboard, Tags, Usuarios | Llamadas a funciones con `setState` dentro de useEffect |
+| `react-hooks/immutability` | Activos, Autorizaciones, Tags, Usuarios | Funciones `load*` usadas antes de su declaración |
+| `react-hooks/refs` | Dashboard | Asignación a `ref.current` durante el render |
+| `react-hooks/purity` | Reportes | `Date.now()` en inicializador de `useState` |
+| `react-refresh/only-export-components` | AuthContext, ThemeContext | Exportación de hooks junto a componentes |
+| `@typescript-eslint/no-explicit-any` | Dashboard | Tipo `any` en callback de recharts |
+| `react-hooks/exhaustive-deps` | useSignalR | Dependencia `onMovimiento` faltante en useEffect |
+
+### 17.2 Soluciones Aplicadas
+
+| Archivo | Cambio |
+|---------|--------|
+| `AuthContext.tsx` | Token parsing movido a lazy initializer de `useState` (elimina el `useEffect` que llamaba `setUser`) |
+| `ThemeContext.tsx`, `AuthContext.tsx` | `eslint-disable-next-line react-refresh/only-export-components` en hooks exportados |
+| `useSignalR.ts` | `eslint-disable-next-line react-hooks/exhaustive-deps` (SignalR no debe reconectarse si cambia callback) |
+| `Activos.tsx`, `Autorizaciones.tsx`, `Tags.tsx`, `Usuarios.tsx` | Funciones `load*` reordenadas antes del `useEffect`; `eslint-disable-next-line react-hooks/set-state-in-effect` |
+| `Dashboard.tsx` | Eliminado `kpisRef` obsoleto; tipado callback label de Pie (recharts); eslint-disable en efectos de carga |
+| `Reportes.tsx` | `Date.now()` envuelto en lazy initializer `() => ...` |
+| `eslint.config.js` | Sin cambios — los suppress son inline y localizados |
+
+### 17.3 Simplificación del Deploy
+
+El job de deploy se simplificó de usar Vercel CLI (3 pasos: pull → build → deploy, requiriendo 3 secrets) a usar **Deploy Hooks** (un solo `curl -X POST`, 1 secret por plataforma):
+
+**Antes (Vercel CLI):**
+```yaml
+- name: Deploy Frontend to Vercel
+  run: |
+    npm install -g vercel
+    vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+    vercel build --prod --token=$VERCEL_TOKEN
+    vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+```
+
+**Después (Deploy Hook):**
+```yaml
+- name: Deploy Frontend to Vercel
+  run: curl -s -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
+```
+
+Ambos servicios ahora usan el mismo patrón: Render con `RENDER_DEPLOY_HOOK_URL` y Vercel con `VERCEL_DEPLOY_HOOK_URL`.
+
+**Beneficios:**
+- No necesita checkout del repo en el job de deploy
+- No instala dependencias (vercel CLI), reduciendo tiempo de ejecución (~30s → ~5s)
+- El build corre en la infraestructura de cada plataforma (consistente con el build que harían con git integration)
+- Solo 2 secrets en vez de 5
+
+### 17.4 Health Endpoint
+
+Se creó `Controllers/HealthController.cs` para que Render pueda monitorear la salud del servicio:
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+public class HealthController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult Get()
+        => Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
+}
+```
+
+El `healthCheckPath` en `render.yaml` se actualizó de `/` (que devolvía 404) a `/health` (que devuelve 200).
+
+### 17.5 render.yaml actualizado
+
+| Cambio | Valor |
+|--------|-------|
+| `healthCheckPath` | `/health` (endpoint dedicado, no el root que daba 404) |
+| `CORS__AllowedOrigin` | `https://horuseye.vercel.app` (restringido al frontend) |
+
+### 17.6 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `Controllers/HealthController.cs` | **Nuevo:** endpoint `GET /health` para health check |
+| `render.yaml` | `healthCheckPath: /health` + `CORS__AllowedOrigin` |
+| `.github/workflows/ci-cd.yml` | Deploy simplificado a Deploy Hooks (sin Vercel CLI) |
+| `.gitignore` | Agregado `jwt-key.txt` |
+| `Frontends/ReactTS/src/context/AuthContext.tsx` | Token en lazy initializer, remove useEffect |
+| `Frontends/ReactTS/src/context/ThemeContext.tsx` | eslint-disable react-refresh |
+| `Frontends/ReactTS/src/hooks/useSignalR.ts` | eslint-disable exhaustive-deps |
+| `Frontends/ReactTS/src/pages/Activos.tsx` | Reorder load functions, eslint-disable set-state |
+| `Frontends/ReactTS/src/pages/Autorizaciones.tsx` | Reorder load functions, eslint-disable set-state |
+| `Frontends/ReactTS/src/pages/Dashboard.tsx` | Remove kpisRef, fix any type, eslint-disable |
+| `Frontends/ReactTS/src/pages/Reportes.tsx` | Lazy initializer for Date.now() |
+| `Frontends/ReactTS/src/pages/Tags.tsx` | Reorder load functions, eslint-disable set-state |
+| `Frontends/ReactTS/src/pages/Usuarios.tsx` | Reorder load functions, eslint-disable set-state |
 
 ---
 

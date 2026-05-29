@@ -4,7 +4,7 @@ services:
     runtime: docker
     plan: free
     branch: main
-    healthCheckPath: /
+    healthCheckPath: /health
     autoDeploy: true
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
@@ -17,6 +17,8 @@ services:
         value: HorusEyeAPI
       - key: Jwt__Audience
         value: HorusEyeFrontend
+      - key: CORS__AllowedOrigin
+        value: https://horuseye.vercel.app
 databases:
   - name: horuseye-db
     plan: free
