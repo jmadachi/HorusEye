@@ -21,9 +21,7 @@ export default function TagsPage() {
 
   const registerTag = async () => {
     try {
-      await api.post('/api/tags', JSON.stringify(newTagId), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      await api.post('/api/tags', { tagId: newTagId });
       setNewTagId('');
       setShowRegister(false);
       loadTags();
@@ -34,9 +32,7 @@ export default function TagsPage() {
 
   const updateEstado = async (tagId: string, estado: string) => {
     try {
-      await api.put(`/api/tags/${tagId}/estado`, JSON.stringify(estado), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      await api.put(`/api/tags/${tagId}/estado`, { estado });
       loadTags();
     } catch (err) {
       console.error('Error updating tag:', err);
@@ -46,10 +42,9 @@ export default function TagsPage() {
   const reportarDanio = async () => {
     if (!showDamage) return;
     try {
-      await api.post(`/api/tags/${showDamage.tagId}/reportar-danio`,
-        JSON.stringify(showDamage.descripcion),
-        { headers: { 'Content-Type': 'application/json' } }
-      );
+      await api.post(`/api/tags/${showDamage.tagId}/reportar-danio`, {
+        descripcion: showDamage.descripcion
+      });
       setShowDamage(null);
       loadTags();
     } catch (err) {

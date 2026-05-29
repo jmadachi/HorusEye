@@ -24,7 +24,7 @@ for TAG in TAG-A001 TAG-A002 TAG-A003; do
   curl -s -X POST "$API/api/tags" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $TOKEN" \
-    -d "\"$TAG\"" | grep -o '"success":true' && echo "  Tag $TAG registrado" || echo "  Tag $TAG ya existe"
+    -d "{\"tagId\":\"$TAG\"}" | grep -o '"success":true' && echo "  Tag $TAG registrado" || echo "  Tag $TAG ya existe"
 done
 
 echo -e "\n=== 3. Poner tags como DISPONIBLES ==="
@@ -32,7 +32,7 @@ for TAG in TAG-A001 TAG-A002 TAG-A003; do
   curl -s -X PUT "$API/api/tags/$TAG/estado" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $TOKEN" \
-    -d '"DISPONIBLE"' | grep -o '"success":true' && echo "  $TAG → DISPONIBLE"
+    -d "{\"estado\":\"DISPONIBLE\"}" | grep -o '"success":true' && echo "  $TAG → DISPONIBLE"
 done
 
 echo -e "\n=== 4. Crear activos con tags asignados ==="

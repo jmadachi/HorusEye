@@ -1,3 +1,4 @@
+using HorusEye.Api.DTOs;
 using HorusEye.Api.Models;
 using HorusEye.Core.Entities;
 using HorusEye.Core.Enums;
@@ -45,50 +46,51 @@ public class TagsController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Usuario de Gestión")]
-    public async Task<ActionResult<ApiResponse<Tag>>> Create([FromBody] string tagId)
+    public async Task<ActionResult<ApiResponse<Tag>>> Create([FromBody] CreateTagRequest request)
     {
-        var existing = await _context.Tags.FindAsync(tagId);
+        var existing = await _context.Tags.FindAsync(request.TagId);
         if (existing != null)
-            return BadRequest(ApiResponse<Tag>.Fail($"TAG {tagId} ya existe"));
+            return BadRequest(ApiResponse<Tag>.Fail($"TAG {request.TagId} ya existe"));
 
         var tag = new Tag
         {
-            Id = tagId,
+            Id = request.TagId,
             Estado = EstadoTag.DISPONIBLE
         };
 
         _context.Tags.Add(tag);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("TAG registrado: {TagId}", tagId);
+        _logger.LogInformation("TAG registrado: {TagId}", request.TagId);
 
         return CreatedAtAction(null, ApiResponse<Tag>.Ok(tag, "TAG registrado exitosamente"));
     }
 
     [HttpPut("{tagId}/estado")]
     [Authorize(Roles = "Usuario de Gestión")]
-    public async Task<ActionResult<ApiResponse<object>>> UpdateEstado(string tagId, [FromBody] string nuevoEstado)
+    public async Task<ActionResult<ApiResponse<object>>> UpdateEstado(
+        string tagId, [FromBody] UpdateTagEstadoRequest request)
     {
         var tag = await _context.Tags.FindAsync(tagId);
         if (tag == null)
             return NotFound(ApiResponse<object>.Fail($"TAG {tagId} no encontrado"));
 
-        if (!Enum.TryParse<EstadoTag>(nuevoEstado, true, out var estado))
-            return BadRequest(ApiResponse<object>.Fail($"Estado inválido: {nuevoEstado}"));
+        if (!Enum.TryParse<EstadoTag>(request.Estado, true, out var estado))
+            return BadRequest(ApiResponse<object>.Fail($"Estado inválido: {request.Estado}"));
 
         tag.Estado = estado;
         tag.FechaActualizacion = DateTimeOffset.UtcNow;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("TAG {TagId} actualizado a estado {Estado}", tagId, nuevoEstado);
+        _logger.LogInformation("TAG {TagId} actualizado a estado {Estado}", tagId, request.Estado);
 
-        return Ok(ApiResponse<object>.Ok(null!, $"TAG actualizado a {nuevoEstado}"));
+        return Ok(ApiResponse<object>.Ok(null!, $"TAG actualizado a {request.Estado}"));
     }
 
     [HttpPost("{tagId}/reportar-danio")]
     [Authorize(Roles = "Usuario de Gestión")]
     public async Task<ActionResult<ApiResponse<object>>> ReportarDanio(
-        string tagId, [FromBody] string descripcion)
+        string tagId, [FromBody] ReportarDanioRequest request)
     {
         var tag = await _context.Tags.FindAsync(tagId);
         if (tag == null)
@@ -100,14 +102,14 @@ public class TagsController : ControllerBase
         var historial = new TagDanioHistorial
         {
             TagId = tagId,
-            Descripcion = descripcion,
+            Descripcion = request.Descripcion,
             ReportadoPor = User.Identity?.Name
         };
 
         _context.TagsDaniosHistorial.Add(historial);
         await _context.SaveChangesAsync();
 
-        _logger.LogWarning("TAG {TagId} reportado como DAÑADO: {Descripcion}", tagId, descripcion);
+        _logger.LogWarning("TAG {TagId} reportado como DAÑADO: {Descripcion}", tagId, request.Descripcion);
 
         return Ok(ApiResponse<object>.Ok(null!, "TAG reportado como dañado"));
     }

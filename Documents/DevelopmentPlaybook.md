@@ -863,4 +863,83 @@ Las recomendaciones operativas y funcionales están prácticamente todas impleme
 
 ---
 
+## 12. Correcciones de Despliegue (28-Mayo-2026)
+
+### 12.1 Problema: Web Service «Failed» en Render
+
+**Síntoma:** Al sincronizar el Blueprint, la BD (`horuseye-db`) quedaba «Available» pero el Web Service (`horuseye-api`) quedaba «Failed».
+
+**Causa raíz:** El `render.yaml` original usaba `runtime: image` con `ttl.sh/horuseye-api:latest`, un registro público donde las imágenes expiran a las 24h. Render no encontraba la imagen para desplegar.
+
+**Solución:** Cambiar a `runtime: docker` para que Render construya la imagen directamente desde el `Dockerfile` del repositorio.
+
+### 12.2 Problema: `Name or service not known` al conectar a PostgreSQL
+
+**Síntoma:** El contenedor se iniciaba pero crasheaba con `NpgsqlException: Name or service not known`.
+
+**Causa raíz:** La variable `ConnectionStrings__DefaultConnection` en `render.yaml` usaba templates `${DATABASE_HOST}`, `${DATABASE_DB}`, etc. Render no resolvía estas variables anidadas dentro del valor de otra variable.
+
+**Solución:** Reemplazar las variables template por `fromDatabase` con `property: connectionString`, que Render inyecta directamente como el connection string completo en formato `postgres://`.
+
+### 12.3 Problema: Puerto incorrecto para Render Free Tier
+
+**Síntoma:** El servicio crasheaba con `Exited with status 139` sin mensaje claro.
+
+**Causa raíz:** El `Dockerfile` hardcodeaba `ENV ASPNETCORE_URLS=http://+:8080`, pero Render Free Tier asigna un puerto dinámico (`PORT=10000`).
+
+**Solución:** Eliminar el `ENV ASPNETCORE_URLS` del `Dockerfile` y leer la variable `PORT` en `Program.cs`:
+
+```csharp
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://+:{port}");
+```
+
+### 12.4 Problema: CORS bloqueado en producción
+
+**Síntoma:** El frontend en Vercel recibía error CORS al llamar la API en Render.
+
+**Causa raíz:** El middleware manual de CORS en `Program.cs` (líneas 172-186) interfería con el pipeline oficial de CORS, y la política `SetIsOriginAllowed(_ => true)` no leía la variable `CORS__AllowedOrigin` documentada en la guía de despliegue.
+
+**Solución:**
+- Eliminar el middleware manual de CORS que duplicaba cabeceras y manejaba OPTIONS manualmente.
+- Modificar la policy de CORS para leer `CORS__AllowedOrigin` del entorno, con fallback a `SetIsOriginAllowed(_ => true)`.
+
+```csharp
+var allowedOrigin = builder.Configuration["CORS__AllowedOrigin"];
+options.AddPolicy("AllowFrontend", policy =>
+{
+    if (!string.IsNullOrEmpty(allowedOrigin))
+        policy.WithOrigins(allowedOrigin).AllowCredentials();
+    else
+        policy.SetIsOriginAllowed(_ => true);
+    policy.AllowAnyHeader().AllowAnyMethod();
+});
+```
+
+### 12.5 Problema: Error de sintaxis SQL en `init.sql`
+
+**Síntoma:** Al ejecutar `init.sql` en PostgreSQL, fallaba con error de sintaxis.
+
+**Causa raíz:** Línea 6: `"Tags` sin comilla de cierre (debería ser `"Tags"`).
+
+**Solución:** Agregar la comilla doble faltante.
+
+### 12.6 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `render.yaml` | `runtime: image` → `runtime: docker`; connection string vía `fromDatabase` |
+| `.dockerignore` | Nuevo: excluye bin/obj/node_modules del contexto Docker |
+| `Dockerfile` | Eliminado `ENV ASPNETCORE_URLS=http://+:8080` |
+| `Program.cs` | `UseUrls` dinámico con `PORT`; CORS configurable vía `CORS__AllowedOrigin` |
+| `Databases/PostgreSQL/init.sql` | Fix sintaxis: `"Tags"` |
+
+### 12.7 Estado Final
+
+- API Backend: `https://horuseye-api.onrender.com` — **Operativo** (HTTP 200, login JWT funcional)
+- Base de Datos: PostgreSQL 18 en Render — **Available**
+- Frontend: Vercel (pendiente de configurar `VITE_API_URL`)
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*

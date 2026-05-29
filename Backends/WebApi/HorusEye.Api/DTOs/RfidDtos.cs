@@ -30,6 +30,8 @@ public class ActivoRequest
     [Required]
     public string Nombre { get; set; } = string.Empty;
     [Required]
+    [RegularExpression("^(Computadores|Monitores|Perifericos|Impresoras|Sillas|Redes|Telefonia|Tablets|Audio|Accesorios|Otros)$",
+        ErrorMessage = "Categoria inválida. Valores permitidos: Computadores, Monitores, Perifericos, Impresoras, Sillas, Redes, Telefonia, Tablets, Audio, Accesorios, Otros")]
     public string Categoria { get; set; } = string.Empty;
     public string? TenedorResponsable { get; set; }
     public string? TagId { get; set; }

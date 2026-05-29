@@ -52,7 +52,8 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<HorusEyeDbContext>()
 .AddDefaultTokenProviders();
 
-var jwtKey = builder.Configuration["Jwt:Key"]!;
+var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException(
+    "Jwt:Key no configurada. En desarrollo usar appsettings.Development.json, en producción variable Jwt__Key");
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

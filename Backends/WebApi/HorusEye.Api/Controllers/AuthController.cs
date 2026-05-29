@@ -130,8 +130,8 @@ public class AuthController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var user = await _userManager.FindByIdAsync(userId!);
 
-        if (user == null || user.Email != request.Email)
-            return BadRequest(ApiResponse<object>.Fail("Datos inválidos"));
+        if (user == null)
+            return BadRequest(ApiResponse<object>.Fail("Usuario no encontrado"));
 
         var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
         if (!result.Succeeded)
@@ -139,7 +139,7 @@ public class AuthController : ControllerBase
                 "Error al cambiar la contraseña",
                 result.Errors.Select(e => e.Description).ToArray()));
 
-        _logger.LogInformation("Contraseña cambiada para {Email}", request.Email);
+        _logger.LogInformation("Contraseña cambiada para {Email}", user.Email);
 
         return Ok(ApiResponse<object>.Ok(null!, "Contraseña cambiada exitosamente"));
     }
