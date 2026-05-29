@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import type { Activo, Tag } from '../types';
-import { Plus, Pencil, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Activos() {
   const [activos, setActivos] = useState<Activo[]>([]);
@@ -11,12 +11,21 @@ export default function Activos() {
   const [editing, setEditing] = useState<Activo | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Activo | null>(null);
   const [form, setForm] = useState({ placa: '', nombre: '', categoria: '', tenedorResponsable: '', tagId: '' });
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 10;
+  const totalPages = Math.ceil(total / pageSize);
   const { hasRole } = useAuth();
   const isGestion = hasRole('Usuario de Gestión');
 
-  const loadActivos = async () => {
-    const { data } = await api.get('/api/activos');
-    if (data.success) setActivos(data.data);
+  const loadActivos = async (p?: number) => {
+    const currentPage = p ?? page;
+    const { data } = await api.get(`/api/activos?page=${currentPage}&pageSize=${pageSize}`);
+    if (data.success) {
+      setActivos(data.data.items);
+      setTotal(data.data.total);
+      setPage(data.data.page);
+    }
   };
 
   const loadTags = async () => {
@@ -26,7 +35,7 @@ export default function Activos() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadActivos();
+    loadActivos(1);
     loadTags();
   }, []);
 
@@ -56,7 +65,7 @@ export default function Activos() {
         await api.post('/api/activos', form);
       }
       setShowModal(false);
-      loadActivos();
+      loadActivos(1);
       loadTags();
     } catch (err) {
       console.error('Error saving activo:', err);
@@ -68,7 +77,7 @@ export default function Activos() {
     try {
       await api.delete(`/api/activos/${deleteTarget.id}`);
       setDeleteTarget(null);
-      loadActivos();
+      loadActivos(1);
       loadTags();
     } catch (err) {
       console.error('Error deleting activo:', err);
@@ -136,6 +145,43 @@ export default function Activos() {
           </tbody>
         </table>
       </div>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} de {total} activos
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadActivos(page - 1)}
+              disabled={page <= 1}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => loadActivos(p)}
+                className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${
+                  p === page
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => loadActivos(page + 1)}
+              disabled={page >= totalPages}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

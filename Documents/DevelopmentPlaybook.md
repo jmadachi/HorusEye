@@ -1544,4 +1544,124 @@ El `healthCheckPath` en `render.yaml` se actualizó de `/` (que devolvía 404) a
 
 ---
 
+## 18. Paginación de Consultas (29-Mayo-2026)
+
+### 18.1 Motivación
+
+El endpoint `GET /api/activos` retornaba todos los activos sin paginación. Con el crecimiento del inventario, la respuesta se volvía cada vez más pesada, aumentando el tiempo de carga y el consumo de memoria tanto en el servidor como en el cliente.
+
+### 18.2 Cambios en el Backend
+
+**Archivo:** `Backends/WebApi/HorusEye.Api/Controllers/ActivosController.cs`
+
+Se modificó el método `GetAll()` para aceptar parámetros de paginación y devolver una respuesta estructurada:
+
+| Parámetro | Tipo | Default | Descripción |
+|-----------|------|---------|-------------|
+| `page` | `int` | 1 | Número de página (1-based) |
+| `pageSize` | `int` | 50 | Elementos por página |
+
+**Antes:**
+```csharp
+[HttpGet]
+public async Task<ActionResult<ApiResponse<List<ActivoResponse>>>> GetAll()
+{
+    var activos = await _context.Activos
+        .Include(a => a.Tag)
+        .OrderByDescending(a => a.FechaRegistro)
+        .Select(a => new ActivoResponse { ... })
+        .ToListAsync();
+
+    return Ok(ApiResponse<List<ActivoResponse>>.Ok(activos));
+}
+```
+
+**Después:**
+```csharp
+[HttpGet]
+public async Task<ActionResult<ApiResponse<object>>> GetAll(
+    [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+{
+    var query = _context.Activos
+        .Include(a => a.Tag)
+        .OrderByDescending(a => a.FechaRegistro);
+
+    var total = await query.CountAsync();
+    var activos = await query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(a => new ActivoResponse { ... })
+        .ToListAsync();
+
+    return Ok(ApiResponse<object>.Ok(new
+    {
+        Items = activos,
+        Total = total,
+        Page = page,
+        PageSize = pageSize
+    }));
+}
+```
+
+**Respuesta JSON (ejemplo):**
+```json
+{
+  "success": true,
+  "message": "Operación exitosa",
+  "data": {
+    "items": [ ... ],
+    "total": 150,
+    "page": 1,
+    "pageSize": 50
+  },
+  "errors": null,
+  "timestamp": "2026-05-29T..."
+}
+```
+
+### 18.3 Cambios en el Frontend
+
+**Archivo:** `Frontends/ReactTS/src/pages/Activos.tsx`
+
+Se agregaron estados de paginación y se actualizó la función `loadActivos` para usar los parámetros `page` y `pageSize`:
+
+```typescript
+const [page, setPage] = useState(1);
+const [total, setTotal] = useState(0);
+const pageSize = 10;
+const totalPages = Math.ceil(total / pageSize);
+
+const loadActivos = async (p?: number) => {
+  const currentPage = p ?? page;
+  const { data } = await api.get(`/api/activos?page=${currentPage}&pageSize=${pageSize}`);
+  if (data.success) {
+    setActivos(data.data.items);
+    setTotal(data.data.total);
+    setPage(data.data.page);
+  }
+};
+```
+
+Se agregó un componente de paginación debajo de la tabla con:
+- **Información contextual:** "Mostrando X-Y de Z activos"
+- **Botón Anterior** (`ChevronLeft`) — deshabilitado en primera página
+- **Números de página** — resalta la página activa con estilo `bg-[#1e3a5f] text-white`
+- **Botón Siguiente** (`ChevronRight`) — deshabilitado en última página
+- Los botones de acción (crear/editar/eliminar) redirigen a la página 1 después de la operación.
+
+### 18.4 Archivos Creados/Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `Controllers/ActivosController.cs` | `GetAll()` acepta `page`/`pageSize`; respuesta paginada con `Items`, `Total`, `Page`, `PageSize` |
+| `Frontends/ReactTS/src/pages/Activos.tsx` | Estados `page`/`total`/`totalPages`; `loadActivos` con parámetro de página; UI de paginación |
+
+### 18.5 Endpoint Actualizado
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/api/activos?page=1&pageSize=50` | Authenticated | Listar activos paginados |
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*

@@ -24,11 +24,16 @@ public class ActivosController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<ActivoResponse>>>> GetAll()
+    public async Task<ActionResult<ApiResponse<object>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
-        var activos = await _context.Activos
+        var query = _context.Activos
             .Include(a => a.Tag)
-            .OrderByDescending(a => a.FechaRegistro)
+            .OrderByDescending(a => a.FechaRegistro);
+
+        var total = await query.CountAsync();
+        var activos = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(a => new ActivoResponse
             {
                 Id = a.Id,
@@ -42,7 +47,13 @@ public class ActivosController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(ApiResponse<List<ActivoResponse>>.Ok(activos));
+        return Ok(ApiResponse<object>.Ok(new
+        {
+            Items = activos,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        }));
     }
 
     [HttpGet("{id:guid}")]
