@@ -1,1 +1,16 @@
 
+
+8. Consulta de Autorizaciones
+Implementar el Componente de Gestión de Autorizaciones de TAG RFID la Consulta debe tener Paginación.
+
+
+Aplica la mejora
+7. Páginación de Consultas
+Implementar la Páginación de las consultas de TAG RFID
+
+Documenta todo en el markdown `DevelopmentPlaybook.md` del directorio `Documents`.
+Sube To a Git 
+  - Usuario: jmadachi
+  - url: https://github.com/jmadachi/HorusEye/
+Verifica que la base de datos y el backend se hayan publicado correctamente en RENDER.
+Verifica que la App de React se haya publicado correctamente en VERCEL.
