@@ -13,7 +13,7 @@ services:
     shm_size: 128mb
     environment:
       POSTGRES_USER: ${DB_USER:-horuseyeuser}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-H0rvEy3}
+      POSTGRES_PASSWORD: H0rvEy3
       POSTGRES_DB: ${DB_NAME:-horuseyedb}
       PGDATA: /var/lib/postgresql
     ports:
@@ -36,7 +36,7 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${DB_NAME:-horuseyedb};Username=${DB_USER:-horuseyeuser};Password=${DB_PASSWORD:-H0rvEy3}
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=horuseyedb;Username=horuseyeuser;Password=H0rvEy3
       Jwt__Key: ${JWT_KEY:-HorusEyeSuperSecretKey2026!@#$%^&*()VeryLongSecure}
       Jwt__Issuer: HorusEyeAPI
       Jwt__Audience: HorusEyeFrontend
