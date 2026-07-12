@@ -172,7 +172,47 @@ El Administrador del Proveedor puede gestionar usuarios asociados a SU proveedor
 
 ---
 
-## Prueba 9: Modulos de Solo Lectura
+## Prueba 9: Configuracion de Antena para un Cliente
+
+El Admin del Proveedor puede configurar antenas para sus clientes. Los fabricantes ya deben estar creados por el Admin del Sistema.
+
+### 9.1 Crear Cliente (si no existe)
+1. Ir a "Clientes" > "Nuevo Cliente"
+2. Nombre: "Logistica Express", RUC: 1111222233334
+3. Guardar
+4. **Esperado:** Cliente creado, asociado a SU proveedor
+
+### 9.2 Registrar Dispositivo RFID
+1. Ir a "Dispositivos" > "Nuevo Dispositivo"
+2. Completar:
+   - **Nombre:** Puerta de Entrada
+   - **Fabricante:** Chainway (ya configurado por AdminSistema)
+   - **Modelo:** U300
+   - **Direccion IP:** 192.168.1.50
+   - **Cliente:** Logistica Express
+   - **Tipo:** Fijo
+   - **Endpoint:** `https://horuseye-api.mauricioadachi.dev/api/eventos-rfid/chainway`
+3. Guardar
+4. **Esperado:** Dispositivo registrado para el cliente
+
+### 9.3 Crear Ubicaciones para el Cliente
+1. Ir a "Ubicaciones", seleccionar "Logistica Express"
+2. Crear: Bodega → Entrada
+3. **Esperado:** Arbol de ubicaciones creado
+
+### 9.4 Asociar Dispositivo a Ubicacion
+1. Editar el dispositivo "Puerta de Entrada"
+2. Seleccionar ubicacion "Entrada"
+3. Guardar
+4. **Esperado:** Dispositivo con ubicacion asignada
+
+### 9.5 Verificar que el Dispositivo Aparece
+1. Ir a "Dispositivos"
+2. **Esperado:** El dispositivo "Puerta de Entrada" aparece en la lista, solo se ven dispositivos de los clientes de SU proveedor
+
+---
+
+## Prueba 10: Modulos de Solo Lectura
 
 ### 9.1 Activos
 1. Ir a "Activos"

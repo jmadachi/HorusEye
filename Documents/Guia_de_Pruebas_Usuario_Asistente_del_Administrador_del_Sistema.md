@@ -156,7 +156,54 @@ El Asistente del Administrador del Sistema puede crear usuarios de los tipos: Pr
 
 ---
 
-## Prueba 10: Verificar Restriccion de Eliminacion
+## Prueba 10: Configuracion de Antena (Flujo Completo)
+
+El Asistente del Admin puede configurar antenas completas excepto eliminar fabricantes.
+
+### 10.1 Crear Fabricante
+1. Ir a "Fabricantes" > "Nuevo Fabricante"
+2. Nombre: "Zebra", Descripcion: "Lectores Zebra FX9600"
+3. Guardar
+4. **Esperado:** Fabricante creado
+
+### 10.2 Configurar Campos del Payload
+1. Expandir "Zebra"
+2. Agregar campos: `epc` → EPC, `antenna` → Antenna, `rssi` → RSSI, `timestamp` → Timestamp
+3. **Esperado:** 4 campos configurados
+
+### 10.3 Crear Proveedor
+1. Ir a "Proveedores" > "Nuevo Proveedor"
+2. Completar datos
+3. Guardar
+4. **Esperado:** Proveedor creado
+
+### 10.4 Crear Cliente
+1. Ir a "Clientes" > "Nuevo Cliente"
+2. Completar datos, asociar al proveedor
+3. Guardar
+4. **Esperado:** Cliente creado
+
+### 10.5 Registrar Dispositivo
+1. Ir a "Dispositivos" > "Nuevo Dispositivo"
+2. Nombre: "Muelle de Carga", Fabricante: Zebra, Modelo: FX9600
+3. IP: 192.168.1.200, Cliente: (el creado)
+4. Endpoint: `https://horuseye-api.mauricioadachi.dev/api/eventos-rfid/zebra`
+5. Guardar
+6. **Esperado:** Dispositivo registrado
+
+### 10.6 Crear Ubicaciones
+1. Ir a "Ubicaciones", seleccionar el cliente
+2. Crear: Bodega → Zona → Muelle
+3. **Esperado:** Arbol creado
+
+### 10.7 Asociar Dispositivo a Ubicacion
+1. Editar el dispositivo, seleccionar ubicacion "Muelle"
+2. Guardar
+3. **Esperado:** Dispositivo con ubicacion asignada
+
+---
+
+## Prueba 11: Verificar Restriccion de Eliminacion
 
 1. Intentar eliminar un usuario que es "Administrador del Sistema"
 2. **Esperado:** El sistema lo permite (el AsistenteAdmin tiene permisos de eliminacion sobre usuarios que el creo)

@@ -119,7 +119,42 @@ El Administrador del Cliente puede gestionar usuarios Asistentes del Cliente aso
 
 ---
 
-## Prueba 7: Modulos de Solo Lectura
+## Prueba 7: Configuracion de Antena para SU Cliente
+
+El Admin del Cliente puede configurar dispositivos y ubicaciones para SU cliente. Los fabricantes y proveedores ya deben estar creados.
+
+### 7.1 Registrar Dispositivo RFID
+1. Ir a "Dispositivos" > "Nuevo Dispositivo"
+2. Completar:
+   - **Nombre:** Lector Muelle de Carga
+   - **Fabricante:** Chainway
+   - **Modelo:** U300
+   - **Direccion IP:** 192.168.1.75
+   - **Cliente:** Se asigna automaticamente a SU cliente
+   - **Tipo:** Fijo
+   - **Endpoint:** `https://horuseye-api.mauricioadachi.dev/api/eventos-rfid/chainway`
+3. Guardar
+4. **Esperado:** Dispositivo registrado para SU cliente
+
+### 7.2 Crear Ubicaciones
+1. Ir a "Ubicaciones" (SU cliente se selecciona automatico)
+2. Crear: Bodega → Muelle de Carga
+3. **Esperado:** Arbol de ubicaciones creado
+
+### 7.3 Asociar Dispositivo a Ubicacion
+1. Editar el dispositivo
+2. Seleccionar ubicacion "Muelle de Carga"
+3. Guardar
+4. **Esperado:** Dispositivo con ubicacion
+
+### 7.4 Editar Dispositivo
+1. Cambiar la IP o el nombre del dispositivo
+2. Guardar
+3. **Esperado:** Datos actualizados
+
+---
+
+## Prueba 8: Modulos de Solo Lectura
 
 ### 7.1 Activos
 1. Ir a "Activos"
