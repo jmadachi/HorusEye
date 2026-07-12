@@ -3,6 +3,7 @@ using System;
 using HorusEye.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HorusEye.Infrastructure.Migrations
 {
     [DbContext(typeof(HorusEyeDbContext))]
-    partial class HorusEyeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260712220258_RBAC_MultiNivel")]
+    partial class RBAC_MultiNivel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

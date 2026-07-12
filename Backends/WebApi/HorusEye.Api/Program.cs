@@ -137,7 +137,7 @@ using (var scope = app.Services.CreateScope())
         context.Database.EnsureCreated();
         await context.Database.ExecuteSqlRawAsync(
             "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") " +
-            "VALUES ('20260529030543_InitialCreate', '10.0.0')");
+            "VALUES ('20260529030543_InitialCreate', '10.0.0') ON CONFLICT DO NOTHING");
     }
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
