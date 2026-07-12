@@ -376,71 +376,59 @@ El Administrador del Sistema tiene **acceso total** a todas las funcionalidades 
 
 ## Prueba 14: Configuracion Completa de Antena (Flujo End-to-End)
 
-Esta prueba demuestra el proceso completo para que el sistema este listo para recibir y registrar datos de una antena RFID nueva. Es el flujo principal del sistema.
+Esta prueba demuestra el proceso completo para que el sistema este listo para recibir y registrar datos de una antena RFID nueva.
 
-### Paso 1: Configurar Fabricante (que antenas soporta el sistema)
+> **IMPORTANTE:** No confundir **Fabricante** (marca del hardware: Chainway, Zebra) con **Proveedor** (empresa que presta el servicio RFID al cliente). Son conceptos independientes.
+
+### Paso 1: Configurar Fabricante de Hardware (que marcas de antenas soporta)
+
+El Fabricante define que marca de antena fisica esta conectada y **como interpretar el JSON que esa antena envia**. Solo se configura una vez por marca.
 
 1. Ir a "Fabricantes"
 2. Clic en "Nuevo Fabricante"
 3. Completar:
-   - **Nombre:** Chainway
-   - **Descripcion:** Lectores RFID UHF de la marca Chainway
-   - **URL Documentacion:** (opcional) URL a la documentacion del fabricante
-4. Clic en "Guardar"
-5. **Esperado:** Fabricante creado en la lista
+   - **Nombre:** Chainway (es la marca del hardware, NO la empresa proveedora)
+   - **Descripcion:** Lectores RFID UHF Chainway (modelos U300, U710, etc.)
+4. Guardar
+5. **Esperado:** Fabricante "Chainway" creado
 
-### Paso 2: Configurar Campos del Payload (que envia la antena)
+### Paso 2: Configurar Campos del Payload (que envia la antena Chainway)
 
-1. En la lista de fabricantes, hacer clic en la flecha para expandir "Chainway"
-2. Verificar que aparece "Campos del Payload" (vacio)
-3. Clic en "+ Agregar campo"
-4. Agregar campo 1:
-   - **Campo Externo:** `epc` (nombre del campo en el JSON que envia la antena)
-   - **Campo Interno:** Seleccionar `EPC` (campo interno del sistema)
+Cada fabricante envia un JSON con campos con nombres diferentes. Aqui se mapea el JSON de la antena a los campos internos del sistema.
+
+1. Expandir "Chainway" en la lista de fabricantes
+2. Clic en "+ Agregar campo"
+3. Agregar campo 1:
+   - **Campo Externo:** `epc` (nombre del campo en el JSON de la antena)
+   - **Campo Interno:** Seleccionar `EPC`
    - **Tipo:** String
    - **Requerido:** Si
    - **Orden:** 0
-   - Guardar
-5. Agregar campo 2:
+4. Agregar campo 2:
    - **Campo Externo:** `antenna`
    - **Campo Interno:** `Antenna`
    - **Tipo:** Int
    - **Requerido:** Si
    - **Orden:** 1
-   - Guardar
-6. Agregar campo 3:
+5. Agregar campo 3:
    - **Campo Externo:** `rssi`
    - **Campo Interno:** `RSSI`
    - **Tipo:** Int
    - **Requerido:** Si
    - **Orden:** 2
-   - Guardar
-7. Agregar campo 4:
+6. Agregar campo 4:
    - **Campo Externo:** `timestamp`
    - **Campo Interno:** `Timestamp`
    - **Tipo:** DateTime
    - **Requerido:** Si
    - **Orden:** 3
-   - Guardar
-8. **Esperado:** 4 campos configurados en la tabla. El sistema ahora sabe como interpretar el JSON que envia una antena Chainway.
+7. **Esperado:** 4 campos configurados. El sistema ahora sabe como leer el JSON de una antena Chainway.
 
-> **Nota:** Si se necesita soportar otro fabricante (ej: Zebra, Impinj), se crea otro Fabricante con sus propios campos de payload. Cada fabricante puede tener una estructura JSON diferente.
+> **Nota:** Si se instalan antenas de otra marca (ej: Zebra FX9600), se crea OTRO Fabricante "Zebra" con sus propios campos (que pueden tener nombres diferentes en el JSON).
 
-### Paso 3: Crear Proveedor (quien instala/mantiene las antenas)
+### Paso 3: Crear Cliente (quien usa el sistema RFID)
 
-1. Ir a "Proveedores"
-2. Clic en "Nuevo Proveedor"
-3. Completar:
-   - **Nombre:** Keonn Technologies
-   - **Razon Social:** Keonn Technologies SL
-   - **RUC:** 1234567890123
-   - **Direccion:** (direccion del proveedor)
-   - **Telefono:** (telefono)
-   - **Email:** (email de contacto)
-4. Guardar
-5. **Esperado:** Proveedor creado
-
-### Paso 4: Crear Cliente (quien usa las antenas)
+El Cliente es la empresa o entidad cuyo inventario se monitorea. Los dispositivos se asocian a un Cliente.
 
 1. Ir a "Clientes"
 2. Clic en "Nuevo Cliente"
@@ -448,110 +436,82 @@ Esta prueba demuestra el proceso completo para que el sistema este listo para re
    - **Nombre:** Empresa ABC
    - **Razon Social:** Empresa ABC SA
    - **RUC:** 9876543210123
-   - **Proveedor:** Seleccionar "Keonn Technologies" (el proveedor creado)
 4. Guardar
-5. **Esperado:** Cliente creado, asociado al proveedor
+5. **Esperado:** Cliente creado
 
-### Paso 5: Registrar Dispositivo RFID (la antena fisica)
+### Paso 4: Registrar Dispositivo RFID (la antena fisica concreta)
+
+Aqui se registra la **antena fisica especifica** que esta instalada en el cliente. Cada antena es un Dispositivo.
 
 1. Ir a "Dispositivos"
 2. Clic en "Nuevo Dispositivo"
 3. Completar:
-   - **Nombre:** Puerta Principal Bodega 1
-   - **Fabricante:** Chainway
-   - **Modelo:** U300
-   - **Direccion IP:** 192.168.1.100 (IP del dispositivo en la red local)
-   - **Ubicacion:** (texto libre, ej: "Entrada principal")
-   - **Cliente:** Seleccionar "Empresa ABC"
-   - **Tipo:** Fijo (para portales) o Portatil (para pistolas)
+   - **Nombre:** Puerta Principal Bodega 1 (nombre descriptivo de la antena)
+   - **Fabricante:** Seleccionar `Chainway` (el que se creo en el Paso 1)
+   - **Modelo:** U300 (modelo fisico del dispositivo)
+   - **Direccion IP:** 192.168.1.100 (IP en la red local de la bodega)
+   - **Cliente:** Seleccionar `Empresa ABC` (el que se creo en el Paso 3)
+   - **Tipo:** Fijo (para portales/arcos) o Portatil (para pistolas RFID)
    - **Endpoint API:** `https://horuseye-api.mauricioadachi.dev/api/eventos-rfid/chainway`
 4. Guardar
-5. **Esperado:** Dispositivo registrado. El sistema ahora tiene toda la informacion para procesar eventos de esta antena.
+5. **Esperado:** Dispositivo registrado. La antena ya puede enviar eventos al sistema.
 
-> **Importante:** El **Endpoint API** es la URL a donde el dispositivo fisico enviara los eventos RFID. Debe coincidir con el formato configurado en el Fabricante.
+> **Nota sobre Proveedor:** Si la empresa tiene un Proveedor (empresa que le presta el servicio RFID), se asocia aqui. Pero el Proveedor es OPCIONAL para el registro de dispositivos.
 
-### Paso 6: Configurar Ubicacion (donde esta la antena)
+### Paso 5: Configurar Ubicacion (donde fisicamente esta la antena)
 
 1. Ir a "Ubicaciones"
-2. Seleccionar el cliente "Empresa ABC" en el dropdown
+2. Seleccionar "Empresa ABC" en el dropdown
 3. Clic en "Nueva Ubicacion"
-4. Crear nodo raiz:
-   - **Nombre:** Bodega 1
-   - **Tipo de nodo:** Bodega
-   - Guardar
-5. Crear nodo hijo (haciendo clic en "+" sobre "Bodega 1"):
-   - **Nombre:** Zona de Carga
-   - **Tipo de nodo:** Zona
-   - Guardar
-6. Crear sub-hijo:
-   - **Nombre:** Puerta Principal
-   - **Tipo de nodo:** Puerta
-   - Guardar
-7. **Esperado:** Arbol de 3 niveles: Bodega 1 → Zona de Carga → Puerta Principal
+4. Crear nodo raiz: **Nombre:** Bodega 1, **Tipo:** Bodega
+5. Crear nodo hijo (clic en "+" sobre "Bodega 1"): **Nombre:** Zona de Carga, **Tipo:** Zona
+6. Crear sub-hijo: **Nombre:** Puerta Principal, **Tipo:** Puerta
+7. **Esperado:** Arbol: Bodega 1 → Zona de Carga → Puerta Principal
 
-### Paso 7: Asociar Dispositivo a Ubicacion (opcional pero recomendado)
+### Paso 6: Asociar Dispositivo a Ubicacion
 
 1. Ir a "Dispositivos"
-2. Editar el dispositivo "Puerta Principal Bodega 1"
-3. Seleccionar la ubicacion "Puerta Principal" en el arbol
+2. Editar "Puerta Principal Bodega 1"
+3. Seleccionar ubicacion "Puerta Principal" en el arbol
 4. Guardar
-5. **Esperado:** El dispositivo ahora tiene su ubicacion fisica registrada
+5. **Esperado:** Dispositivo con ubicacion asignada
 
-### Paso 8: Verificar que el Dispositivo esta Listo
+### Paso 7: Probar que el Sistema Recibe Eventos de esta Antena
 
-1. Ir a "Dispositivos"
-2. Verificar que el dispositivo muestra:
-   - Fabricante: Chainway
-   - Modelo: U300
-   - IP: 192.168.1.100
-   - Cliente: Empresa ABC
-   - Endpoint: https://horuseye-api.mauricioadachi.dev/api/eventos-rfid/chainway
-3. **Esperado:** Todo configurado correctamente
-
-### Paso 9: Probar que el Sistema Recibe Eventos
-
-1. Abrir una terminal
-2. Ejecutar (simula lo que hace la antena fisica):
+1. Abrir terminal y ejecutar (simula lo que hace la antena fisica):
    ```bash
    curl -X POST https://horuseye-api.mauricioadachi.dev/api/eventos-rfid/chainway \
      -H "Content-Type: application/json" \
      -d '{"epc":"TAG-TEST-001","antenna":1,"rssi":-45,"timestamp":"2026-07-12T23:00:00Z","reader_id":"U300-001"}'
    ```
-3. **Esperado:** Respuesta `"success": true` (si el tag esta registrado) o `"TAG no registrado"` (si el tag aun no existe en el sistema)
+2. **Esperado:** `"success": true` si el TAG esta registrado, o `"TAG no registrado"` si falta
 
-### Paso 10: Verificar en el Dashboard
+### Paso 8: Verificar en el Dashboard
 
 1. Ir a "Dashboard"
-2. Verificar que el contador de "Ingresos Hoy" aumento en 1
-3. Verificar que el movimiento aparece en la tabla de "Movimientos Recientes"
-4. **Esperado:** El movimiento muestra el TAG, el activo asociado, tipo INGRESO, y el punto de lectura
+2. Verificar que "Ingresos Hoy" aumento
+3. Verificar que el movimiento aparece en "Movimientos Recientes"
+4. **Esperado:** Movimiento con TAG, activo, tipo INGRESO, punto de lectura
 
-### Resumen del Flujo
+### Resumen: Dos Conceptos Distintos
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  FLUJO DE CONFIGURACION DE ANTENA EN LA APLICACION          │
+│  FABRICANTE (Hardware)     vs     PROVEEDOR (Servicio)      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  1. FABRICANTES → Definir que antenas soporta el sistema     │
-│     └── Configurar campos del payload JSON                    │
+│  "Que marca de antena es"      "Quien presta el servicio"   │
 │                                                               │
-│  2. PROVEEDORES → Quien instala/mantiene el hardware         │
+│  Ej: Chainway                  Ej: Keonn Technologies        │
+│      Zebra                         Seguridad RFID SA         │
+│      Impinj                        Logistica Express         │
 │                                                               │
-│  3. CLIENTES → Quien usa las antenas                          │
-│     └── Asociado a un proveedor                               │
+│  Define: JSON que envia        Define: Relacion comercial    │
+│  Cada antena tiene uno         Varios clientes pueden tener  │
+│                                el mismo proveedor            │
 │                                                               │
-│  4. DISPOSITIVOS → Registrar la antena fisica                 │
-│     └── IP, modelo, cliente, endpoint API                     │
-│                                                               │
-│  5. UBICACIONES → Donde esta la antena (arbol jerarquico)    │
-│     └── Bodega → Zona → Puerta                                │
-│                                                               │
-│  6. El dispositivo fisico envia eventos al endpoint           │
-│     └── POST /api/eventos-rfid/chainway                       │
-│                                                               │
-│  7. El sistema procesa y registra el movimiento               │
-│     └── Aparece en el Dashboard en tiempo real                │
+│  OBLIGATORIO para que          OPCIONAL - solo si hay        │
+│  el sistema reciba eventos     un intermediario              │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
 ```

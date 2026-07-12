@@ -160,7 +160,9 @@ El Asistente del Administrador del Sistema puede crear usuarios de los tipos: Pr
 
 El Asistente del Admin puede configurar antenas completas excepto eliminar fabricantes.
 
-### 10.1 Crear Fabricante
+> **Recordar:** Fabricante = marca del hardware (Chainway, Zebra). Proveedor = empresa que presta el servicio (concepto separado).
+
+### 10.1 Crear Fabricante de Hardware
 1. Ir a "Fabricantes" > "Nuevo Fabricante"
 2. Nombre: "Zebra", Descripcion: "Lectores Zebra FX9600"
 3. Guardar
@@ -171,8 +173,8 @@ El Asistente del Admin puede configurar antenas completas excepto eliminar fabri
 2. Agregar campos: `epc` → EPC, `antenna` → Antenna, `rssi` → RSSI, `timestamp` → Timestamp
 3. **Esperado:** 4 campos configurados
 
-### 10.3 Crear Proveedor
-1. Ir a "Proveedores" > "Nuevo Proveedor"
+### 10.3 Crear Cliente
+1. Ir a "Clientes" > "Nuevo Cliente"
 2. Completar datos
 3. Guardar
 4. **Esperado:** Proveedor creado
