@@ -10,6 +10,11 @@ import TagsPage from './pages/Tags';
 import Reportes from './pages/Reportes';
 import Usuarios from './pages/Usuarios';
 import Autorizaciones from './pages/Autorizaciones';
+import Proveedores from './pages/Proveedores';
+import Clientes from './pages/Clientes';
+import Dispositivos from './pages/Dispositivos';
+import Ubicaciones from './pages/Ubicaciones';
+import Fabricantes from './pages/Fabricantes';
 
 function App() {
   return (
@@ -31,6 +36,11 @@ function App() {
             <Route path="/reportes" element={<Reportes />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/autorizaciones" element={<Autorizaciones />} />
+            <Route path="/proveedores" element={<Proveedores />} />
+            <Route path="/clientes" element={<Clientes />} />
+            <Route path="/dispositivos" element={<Dispositivos />} />
+            <Route path="/ubicaciones" element={<Ubicaciones />} />
+            <Route path="/fabricantes" element={<Fabricantes />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

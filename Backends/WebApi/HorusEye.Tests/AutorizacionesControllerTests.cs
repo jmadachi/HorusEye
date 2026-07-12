@@ -37,7 +37,7 @@ public class AutorizacionesControllerTests
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, "test-user"),
-            new Claim(ClaimTypes.Role, "Usuario de Gestión")
+            new Claim(ClaimTypes.Role, "Administrador del Sistema")
         }));
         _controller.ControllerContext = new ControllerContext
         {
@@ -73,7 +73,7 @@ public class AutorizacionesControllerTests
         var result = await _controller.GetAll();
         var ok = result.Result as OkObjectResult;
         ok.Should().NotBeNull();
-        var response = ok!.Value as ApiResponse<List<AutorizacionResponse>>;
+        var response = ok!.Value as ApiResponse<object>;
         response.Should().NotBeNull();
         response!.Success.Should().BeTrue();
     }

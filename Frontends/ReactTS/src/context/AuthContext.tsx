@@ -8,7 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  hasRole: (role: string) => boolean;
+  hasRole: (role: string | string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,12 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(data.message);
     }
 
-    const { accessToken, refreshToken, userId, email: userEmail, role, userName } = data.data;
+    const { accessToken, refreshToken, userId, email: userEmail, role, userName, proveedorId, clienteId } = data.data;
 
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
 
-    const userData: User = { id: userId, email: userEmail, role, userName };
+    const userData: User = { id: userId, email: userEmail, role, userName, proveedorId, clienteId };
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };
@@ -60,8 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = '/login';
   };
 
-  const hasRole = (role: string) => {
-    return user?.role === role;
+  const hasRole = (role: string | string[]) => {
+    if (!user) return false;
+    if (Array.isArray(role)) {
+      return role.includes(user.role);
+    }
+    return user.role === role;
   };
 
   return (

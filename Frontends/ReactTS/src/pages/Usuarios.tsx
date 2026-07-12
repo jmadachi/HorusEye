@@ -16,7 +16,7 @@ export default function Usuarios() {
   const [users, setUsers] = useState<User[]>([]);
   const [modalType, setModalType] = useState<ModalType>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [form, setForm] = useState({ email: '', password: '', userName: '', role: 'Usuario de Consulta' });
+  const [form, setForm] = useState({ email: '', password: '', userName: '', role: 'Asistente del Cliente' });
   const [resetPassword, setResetPassword] = useState('');
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
@@ -115,8 +115,8 @@ export default function Usuarios() {
     } catch { /* ignore */ }
   };
 
-  if (!hasRole('Usuario de Gestión')) {
-    return <p className="text-gray-500 dark:text-gray-400">No tienes permisos para ver esta página.</p>;
+  if (!hasRole(['Administrador del Sistema', 'Asistente del Administrador del Sistema'])) {
+    return <p className="text-gray-500 dark:text-gray-400">No tienes permisos para ver esta pagina.</p>;
   }
 
   return (
@@ -146,8 +146,10 @@ export default function Usuarios() {
                 <td className="px-4 py-3">{u.email}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    u.roles.includes('Usuario de Gestión')
+                    u.roles.includes('Administrador del Sistema')
                       ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'
+                      : u.roles.includes('Soporte del Sistema')
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
                       : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
                   }`}>
                     {u.roles.join(', ')}
@@ -335,8 +337,13 @@ function UserFormModal({
             <select value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]">
-              <option value="Usuario de Consulta">Usuario de Consulta</option>
-              <option value="Usuario de Gestión">Usuario de Gestión</option>
+              <option value="Administrador del Sistema">Administrador del Sistema</option>
+              <option value="Asistente del Administrador del Sistema">Asistente del Administrador del Sistema</option>
+              <option value="Soporte del Sistema">Soporte del Sistema</option>
+              <option value="Administrador del Proveedor">Administrador del Proveedor</option>
+              <option value="Asistente del Proveedor">Asistente del Proveedor</option>
+              <option value="Administrador del Cliente">Administrador del Cliente</option>
+              <option value="Asistente del Cliente">Asistente del Cliente</option>
             </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">

@@ -56,7 +56,7 @@ public class TagsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Usuario de Gestión")]
+    [Authorize(Roles = "Administrador del Sistema,Asistente del Administrador del Sistema")]
     public async Task<ActionResult<ApiResponse<Tag>>> Create([FromBody] CreateTagRequest request)
     {
         var existing = await _context.Tags.FindAsync(request.TagId);
@@ -78,7 +78,7 @@ public class TagsController : ControllerBase
     }
 
     [HttpPut("{tagId}/estado")]
-    [Authorize(Roles = "Usuario de Gestión")]
+    [Authorize(Roles = "Administrador del Sistema,Asistente del Administrador del Sistema")]
     public async Task<ActionResult<ApiResponse<object>>> UpdateEstado(
         string tagId, [FromBody] UpdateTagEstadoRequest request)
     {
@@ -99,7 +99,7 @@ public class TagsController : ControllerBase
     }
 
     [HttpPost("{tagId}/reportar-danio")]
-    [Authorize(Roles = "Usuario de Gestión")]
+    [Authorize(Roles = "Administrador del Sistema,Asistente del Administrador del Sistema")]
     public async Task<ActionResult<ApiResponse<object>>> ReportarDanio(
         string tagId, [FromBody] ReportarDanioRequest request)
     {

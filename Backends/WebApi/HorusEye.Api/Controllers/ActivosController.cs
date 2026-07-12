@@ -82,7 +82,7 @@ public class ActivosController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Usuario de Gestión")]
+    [Authorize(Roles = "Administrador del Sistema,Asistente del Administrador del Sistema")]
     public async Task<ActionResult<ApiResponse<ActivoResponse>>> Create([FromBody] ActivoRequest request)
     {
         var placaExists = await _context.Activos.AnyAsync(a => a.Placa == request.Placa);
@@ -137,7 +137,7 @@ public class ActivosController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Usuario de Gestión")]
+    [Authorize(Roles = "Administrador del Sistema,Asistente del Administrador del Sistema")]
     public async Task<ActionResult<ApiResponse<ActivoResponse>>> Update(Guid id, [FromBody] ActivoRequest request)
     {
         var activo = await _context.Activos
@@ -209,7 +209,7 @@ public class ActivosController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Usuario de Gestión")]
+    [Authorize(Roles = "Administrador del Sistema,Asistente del Administrador del Sistema")]
     public async Task<ActionResult<ApiResponse<object>>> Delete(Guid id)
     {
         var activo = await _context.Activos

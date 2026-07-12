@@ -44,6 +44,15 @@
 15. [Mejoras de Calidad de Código (28-Mayo-2026)](#15-mejoras-de-calidad-de-código-28-mayo-2026)
 16. [Mejoras de Infraestructura (28-Mayo-2026)](#16-mejoras-de-infraestructura-28-mayo-2026)
 17. [Resolución de Errores de Lint y Mejoras de CI/CD (29-Mayo-2026)](#17-resolución-de-errores-de-lint-y-mejoras-de-cicd-29-mayo-2026)
+18. [Paginación de Consultas (29-Mayo-2026)](#18-paginación-de-consultas-29-mayo-2026)
+19. [Paginación de Tags RFID (29-Mayo-2026)](#19-paginación-de-consultas--tags-rfid-29-mayo-2026)
+20. [Selector de Ítems por Página (29-Mayo-2026)](#20-selector-de-ítens-por-página-29-mayo-2026)
+21. [Paginación de Autorizaciones (29-Mayo-2026)](#21-paginación-de-autorizaciones-29-mayo-2026)
+22. [Simulación de Autorizaciones (29-Mayo-2026)](#22-simulación-de-autorizaciones-29-mayo-2026)
+23. [Paginación de Usuarios (29-Mayo-2026)](#23-paginación-de-usuarios-29-mayo-2026)
+24. [Migración de Render a OCI (10-Julio-2026)](#24-migración-de-render-a-oci-10-julio-2026)
+25. [Generación de Datos de Prueba — 3 Meses (10-Julio-2026)](#25-generación-de-datos-de-prueba--3-meses-10-julio-2026)
+26. [Notas para la Sesión de Fin de Semana (10-Julio-2026)](#26-notas-para-la-sesión-de-fin-de-semana-10-julio-2026)
 
 ---
 
@@ -1963,4 +1972,263 @@ Se implementó paginación en `GET /api/auth/users` con los mismos parámetros q
 
 ---
 
+## 24. Migración de Render a OCI (10-Julio-2026)
+
+### 24.1 Problema
+
+Render Free Tier presentaba crashes recurrentes (status 139) al despertar el servicio después de periodos de inactividad. Esto causaba indisponibilidad del backend y la base de datos, afectando la experiencia del usuario.
+
+### 24.2 Solución
+
+Se migró el backend y la base de datos a una VM de Oracle Cloud Infrastructure (OCI), manteniendo el frontend en Vercel.
+
+### 24.3 Infraestructura Actual
+
+| Componente | Ubicación | URL |
+|------------|-----------|-----|
+| **Backend + DB** | OCI VM (129.146.22.246) | https://horuseye-api.mauricioadachi.dev |
+| **Frontend** | Vercel | https://horuseye-app.mauricioadachi.dev |
+
+#### OCI VM
+- **Instancia**: instance-20260703-1405 (ARM, 4 OCPUs / 24 GB RAM)
+- **IP Pública**: 129.146.22.246
+- **SSH**: `ssh -i ~/.ssh/id_rsa_oci ubuntu@129.146.22.246`
+
+#### Contenedores Docker
+
+| Contenedor | Servicio | Puerto |
+|------------|----------|--------|
+| horuseye-api | API .NET | 8081 → 8080 (interno) |
+| horuseye-db | PostgreSQL | 5433 → 5432 (interno) |
+| horuseye-tunnel | Cloudflare Tunnel | (compartido con EBM) |
+
+#### Redes Docker
+- HorusEye usa `horuseye_default`
+- `horuseye-api` conectado también a `dotnet10_default` (para tunnel)
+
+#### Cloudflare
+- **Tunnel**: ebm-tunnel (compartido con EBM)
+- **Ruta API**: `horuseye-api.mauricioadachi.dev` → `http://horuseye-api:8080`
+- **Ruta EBM**: `api.mauricioadachi.dev` → `http://ebm-api:8080`
+
+### 24.4 Arquitectura de Red
+
+```
+Usuario → HTTPS → Vercel (Frontend)
+                     ↓ API calls
+                  HTTPS → Cloudflare → HTTP → horuseye-api:8080 (Docker)
+                                                ↓
+                                             PostgreSQL
+```
+
+### 24.5 Comandos de Deploy en OCI
+
+```bash
+# Conectar
+ssh -i ~/.ssh/id_rsa_oci ubuntu@129.146.22.246
+
+# Directorio
+cd /opt/horuseye
+
+# Actualizar
+git pull
+
+# Reconstruir imagen
+docker compose build api
+
+# Reiniciar
+docker compose up -d
+
+# Verificar
+docker ps
+curl http://localhost:8081/health
+```
+
+### 24.6 Variables de Entorno Vercel
+
+- `VITE_API_URL`: `https://horuseye-api.mauricioadachi.dev`
+
+### 24.7 Credenciales de Base de Datos
+
+| Campo | Valor |
+|-------|-------|
+| Host | horuseye-db (Docker) |
+| Port | 5432 (interno) / 5433 (host) |
+| Database | horuseyedb |
+| User | horuseyeuser |
+| Password | H0rvEy3 |
+
+---
+
+## 25. Generación de Datos de Prueba — 3 Meses (10-Julio-2026)
+
+### 25.1 Objetivo
+
+Generar un volumen estadísticamente razonable de datos de prueba para el dashboard, incluyendo:
+- Datos diarios de los últimos 90 días
+- Distribución realista (más actividad en días laborales)
+- Salidas no autorizadas (alarmas) para probar la funcionalidad de alarma
+
+### 25.2 Script: `simulacion-3meses.sh`
+
+**Archivo:** `simulacion-3meses.sh` (raíz del proyecto)
+
+#### Fase 1: Verificar activos existentes
+- Consulta `GET /api/activos?pageSize=100` para obtener activos existentes
+- Si hay menos de 50, crea 50 activos con tags `TAG-3M-XXX`
+- Cada activo tiene: placa, nombre, categoría, responsable, tag RFID
+
+#### Fase 2: Crear autorizaciones de salida
+- Selecciona ~15 activos (30% del total)
+- Crea autorizaciones de salida para estos activos
+- Esto permite que las salidas de estos activos sean "válidas" (sin alarma)
+
+#### Fase 3: Generar movimientos de 90 días
+- Para cada día de los últimos 90 días:
+  - **Días laborales (lun-vie):** 15-25 movimientos aleatorios
+  - **Fines de semana (sáb-dom):** 3-8 movimientos aleatorios
+- Cada movimiento incluye:
+  - Tag aleatorio de los existentes
+  - Punto de lectura aleatorio (5 puntos disponibles)
+  - Tipo: 70% INGRESO, 30% SALIDA
+  - Hora aleatoria entre 7am y 7pm
+- **Alarmas:** Salidas de activos SIN autorización generan `activarAlarmaSonora: true`
+
+#### Resultado esperado
+
+| Métrica | Valor aproximado |
+|---------|------------------|
+| Movimientos totales | ~1,500 |
+| Alarmas generadas | ~300-400 (~22%) |
+| Período | 90 días |
+| Distribución | Más volumen en días laborales |
+
+### 25.3 Otros Scripts de Simulación
+
+| Script | Descripción |
+|--------|-------------|
+| `simulacion-100.sh` | Crea 100 tags + 100 activos + 30 movimientos (batch estático) |
+| `simulacion-prod.sh` | Simulación pequeña con 3 activos y 3 movimientos (demo rápida) |
+| `simulacion-prod-full.sh` | Simulación completa con 10 tags + 8 activos + 6 movimientos |
+
+### 25.4 URLs de Prueba
+
+| URL | Descripción |
+|-----|-------------|
+| https://horuseye-app.mauricioadachi.dev | Frontend (Dashboard) |
+| https://horuseye-api.mauricioadachi.dev | API (Backend) |
+
+### 25.5 Credenciales de Prueba
+
+| Email | Contraseña | Rol |
+|-------|------------|-----|
+| admin@horuseye.com | Admin123! | Gestión (acceso completo) |
+| consulta@horuseye.com | Consulta123! | Consulta (solo lectura) |
+
+---
+
+## 26. Notas para la Sesión de Fin de Semana (10-Julio-2026)
+
+### Estado Actual del Proyecto
+- **Backend + DB**: Funcionando en OCI VM
+- **Frontend**: Funcionando en Vercel
+- **Datos de prueba**: 100 activos, 100 tags, ~1,500 movimientos de 90 días
+- **Alarmas**: ~300-400 salidas no autorizadas registradas
+
+### Pendientes Principales
+- [ ] Configurar backups de PostgreSQL en OCI
+- [ ] Agregar health checks en docker-compose
+- [ ] Monitoreo y alertas
+- [ ] Documentar API con Swagger/OpenAPI
+- [ ] Eliminar `render.yaml` si ya no se usa (legacy)
+
+### Archivos Clave para la Sesión
+- `Documents/DevelopmentPlaybook.md` — Esta bitácora
+- `DOCUMENTACION.md` — Documentación de estado actual
+- `simulacion-3meses.sh` — Script de datos de prueba
+- `docker-compose.yml` — Configuración Docker para OCI
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*
+
+---
+
+## 27. Sesion: Analisis de Dispositivos y Arquitectura Multi-Cliente (12-Julio-2026)
+
+### Contexto
+
+El usuario solicito un analisis profundo del proyecto para entender la arquitectura actual y planificar la integracion con dispositivos RFID reales. Se descubrio que el dispositivo no es Keonn sino Chainway U300.
+
+### Que hicimos
+
+1. **Exploracion del proyecto**
+   - Leimos toda la estructura existente (Backend, Frontend, Database)
+   - Analizamos los 9 controllers del Backend
+   - Revisamos el modelo de datos actual
+
+2. **Investigacion de dispositivos RFID**
+   - Investigamos fabricantes mundiales (Zebra, Impinj, Honeywell, SICK, etc.)
+   - Descubrimos que el dispositivo real es **Chainway U300** (no Keonn)
+   - Identificamos que **RFIDlinked** es el equivalente a AdvanNet para Chainway
+
+3. **Analisis del SDK Chainway**
+   - Extraimos y analizamos los archivos RAR recibidos
+   - Encontramos documentacion Javadoc completa (8,526 lineas)
+   - Identificamos funciones: inventorySingleTag(), startInventoryTag(), GPIO, etc.
+   - Descubrimos que soporta conexion TCP/IP directa
+
+4. **Diseno de arquitectura multi-cliente**
+   - Disenamos modelo de datos: Clientes -> Dispositivos -> Lecturas
+   - Propusimos Provider Pattern para multi-proveedor RFID
+   - Documentamos Modelo C4 de arquitectura
+
+5. **Documentacion tecnica completa**
+   - Creamos `ARCHITECTURE.md` con 800+ lineas
+   - Actualizamos `Analisis_Dispositivos_RFID.md` con mercado RFID
+   - Actualizamos `RSCJA_U300_Chainway.md` con SDK completo
+   - Actualizamos `DevelopmentPlaybook.md` (esta bitácora)
+
+### Decisiones tomadas
+
+| Decision | Justificacion |
+|----------|---------------|
+| **Usar RFIDlinked** | Software oficial de Chainway, equivalente a AdvanNet |
+| **Provider Pattern** | Para soportar multiples proveedores RFID sin duplicar codigo |
+| **Multi-Cliente** | Requisito del negocio: administrar multiples clientes |
+| **Clean Architecture** | Mejores practicas: SOLID, CQRS, Repository Pattern |
+| **Modelo C4** | Para documentar arquitectura en 4 niveles de abstraccion |
+
+### Documentos generados/actualizados
+
+| Documento | Lineas | Contenido |
+|-----------|--------|-----------|
+| `ARCHITECTURE.md` | 800+ | Arquitectura completa, C4, mejores practicas |
+| `Analisis_Dispositivos_RFID.md` | 1000+ | Investigacion de mercado RFID |
+| `RSCJA_U300_Chainway.md` | 500+ | Ficha tecnica U300 + SDK |
+| `DevelopmentPlaybook.md` | 2400+ | Esta bitácora |
+
+### Pendientes para la proxima sesion
+
+- [ ] Disenar modelo de datos multi-cliente (entidades y relaciones)
+- [ ] Crear migraciones EF Core para Clientes y Dispositivos
+- [ ] Probar conexion TCP/IP con dispositivo U300
+- [ ] Investigar API de RFIDlinked en detalle
+
+---
+
+## 28. Documentos del Proyecto
+
+| Documento | Contenido | Ubicacion |
+|-----------|-----------|-----------|
+| **ARCHITECTURE.md** | Arquitectura completa, patrones, C4, mejores practicas | `Documents/ARCHITECTURE.md` |
+| **Analisis_Dispositivos_RFID.md** | Investigacion de mercado RFID | `Documents/Analisis_Dispositivos_RFID.md` |
+| **RSCJA_U300_Chainway.md** | Ficha tecnica del dispositivo U300 + SDK | `Documents/RSCJA_U300_Chainway.md` |
+| **AdvanNet.md** | Comunicacion con hardware RFID | `Documents/AdvanNet.md` |
+| **DevelopmentPlaybook.md** | Esta bitácora | `Documents/DevelopmentPlaybook.md` |
+
+---
+
+> **HorusEye** — *Vigilancia y control absoluto de inventarios.*
+> 
+> **Ultima actualizacion:** 12-Julio-2026

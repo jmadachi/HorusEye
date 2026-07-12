@@ -3,8 +3,10 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
-  LayoutDashboard, Package, Tags, FileText, LogOut, Menu, X, Eye, Shield, Users, Sun, Moon, ShieldCheck
+  LayoutDashboard, Package, Tags, FileText, LogOut, Menu, X, Eye, Shield, Users, Sun, Moon, ShieldCheck,
+  Building2, UsersRound, Cpu, MapPin, Factory
 } from 'lucide-react';
+import { ROLES } from '../types';
 
 export default function Layout() {
   const { user, logout, hasRole } = useAuth();
@@ -12,15 +14,34 @@ export default function Layout() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const adminRoles = [ROLES.ADMIN_SISTEMA, ROLES.ASIST_ADMIN_SISTEMA];
+  const provRoles = [...adminRoles, ROLES.ADMIN_PROVEEDOR];
+  const cliRoles = [...provRoles, ROLES.ADMIN_CLIENTE];
+
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/activos', label: 'Activos', icon: Package },
     { to: '/tags', label: 'Tags RFID', icon: Tags },
     { to: '/reportes', label: 'Reportes', icon: FileText },
     { to: '/autorizaciones', label: 'Autorizaciones', icon: ShieldCheck },
-    ...(hasRole('Usuario de Gestión')
+    ...(hasRole(adminRoles)
       ? [{ to: '/usuarios', label: 'Usuarios', icon: Users }]
-      : [])
+      : []),
+    ...(hasRole(adminRoles)
+      ? [{ to: '/proveedores', label: 'Proveedores', icon: Building2 }]
+      : []),
+    ...(hasRole(provRoles)
+      ? [{ to: '/clientes', label: 'Clientes', icon: UsersRound }]
+      : []),
+    ...(hasRole(cliRoles)
+      ? [{ to: '/dispositivos', label: 'Dispositivos', icon: Cpu }]
+      : []),
+    ...(hasRole(cliRoles)
+      ? [{ to: '/ubicaciones', label: 'Ubicaciones', icon: MapPin }]
+      : []),
+    ...(hasRole(adminRoles)
+      ? [{ to: '/fabricantes', label: 'Fabricantes', icon: Factory }]
+      : []),
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -47,11 +68,12 @@ export default function Layout() {
               {dark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <div className="flex items-center gap-2">
-              {hasRole('Usuario de Gestión')
+              {hasRole(ROLES.ADMIN_SISTEMA)
                 ? <Shield size={16} className="text-[#f59e0b]" />
                 : <Eye size={16} className="text-green-400" />
               }
               <span className="text-sm hidden sm:inline">{user?.userName}</span>
+              <span className="text-xs text-gray-400 hidden sm:inline">({user?.role})</span>
             </div>
             <button
               onClick={logout}
@@ -64,12 +86,12 @@ export default function Layout() {
         </div>
 
         <nav className="hidden lg:flex bg-[#2d5a8e] px-4">
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto">
             {navItems.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
                 to={to}
-                className={`flex items-center gap-2 px-4 py-2 text-sm transition ${
+                className={`flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap transition ${
                   isActive(to)
                     ? 'bg-[#1e3a5f] text-white border-b-2 border-[#f59e0b]'
                     : 'text-gray-200 dark:text-gray-300 hover:bg-[#1e3a5f] hover:text-white'

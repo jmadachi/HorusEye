@@ -99,6 +99,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<PermisoService>();
 
 var allowedOrigin = builder.Configuration["CORS__AllowedOrigin"];
 
@@ -141,7 +142,16 @@ using (var scope = app.Services.CreateScope())
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-    var roles = new[] { "Usuario de Consulta", "Usuario de Gestión" };
+    var roles = new[]
+    {
+        "Administrador del Sistema",
+        "Asistente del Administrador del Sistema",
+        "Soporte del Sistema",
+        "Administrador del Proveedor",
+        "Asistente del Proveedor",
+        "Administrador del Cliente",
+        "Asistente del Cliente"
+    };
     foreach (var role in roles)
     {
         if (!await roleManager.RoleExistsAsync(role))
@@ -151,6 +161,7 @@ using (var scope = app.Services.CreateScope())
     }
 
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+
     var adminEmail = "admin@horuseye.com";
     if (await userManager.FindByEmailAsync(adminEmail) == null)
     {
@@ -163,8 +174,27 @@ using (var scope = app.Services.CreateScope())
         var createResult = await userManager.CreateAsync(adminUser, "Admin123!");
         if (createResult.Succeeded)
         {
-            await userManager.AddToRoleAsync(adminUser, "Usuario de Gestión");
+            await userManager.AddToRoleAsync(adminUser, "Administrador del Sistema");
+            context.UsuariosExtendidos.Add(new HorusEye.Core.Entities.UsuarioExtendido
+            {
+                Id = adminUser.Id
+            });
+            await context.SaveChangesAsync();
             Log.Information("Usuario administrador creado: {Email}", adminEmail);
+        }
+    }
+    else
+    {
+        var adminUser = await userManager.FindByEmailAsync(adminEmail);
+        if (adminUser != null)
+        {
+            var currentRoles = await userManager.GetRolesAsync(adminUser);
+            if (currentRoles.Contains("Usuario de Gestión"))
+            {
+                await userManager.RemoveFromRoleAsync(adminUser, "Usuario de Gestión");
+                await userManager.AddToRoleAsync(adminUser, "Administrador del Sistema");
+                Log.Information("Rol de admin migrado de 'Usuario de Gestión' a 'Administrador del Sistema'");
+            }
         }
     }
 
@@ -180,9 +210,33 @@ using (var scope = app.Services.CreateScope())
         var createResult = await userManager.CreateAsync(consultaUser, "Consulta123!");
         if (createResult.Succeeded)
         {
-            await userManager.AddToRoleAsync(consultaUser, "Usuario de Consulta");
+            await userManager.AddToRoleAsync(consultaUser, "Asistente del Cliente");
+            context.UsuariosExtendidos.Add(new HorusEye.Core.Entities.UsuarioExtendido
+            {
+                Id = consultaUser.Id
+            });
+            await context.SaveChangesAsync();
             Log.Information("Usuario de consulta creado: {Email}", consultaEmail);
         }
+    }
+    else
+    {
+        var consultaUser = await userManager.FindByEmailAsync(consultaEmail);
+        if (consultaUser != null)
+        {
+            var currentRoles = await userManager.GetRolesAsync(consultaUser);
+            if (currentRoles.Contains("Usuario de Consulta"))
+            {
+                await userManager.RemoveFromRoleAsync(consultaUser, "Usuario de Consulta");
+                await userManager.AddToRoleAsync(consultaUser, "Asistente del Cliente");
+                Log.Information("Rol de consulta migrado de 'Usuario de Consulta' a 'Asistente del Cliente'");
+            }
+        }
+    }
+
+    if (!await roleManager.RoleExistsAsync("Usuario de Consulta"))
+    {
+        Log.Information("Roles antiguos eliminados, sistema migrado a 7 roles nuevos");
     }
 }
 

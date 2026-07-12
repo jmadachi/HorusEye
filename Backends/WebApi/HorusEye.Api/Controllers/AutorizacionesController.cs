@@ -10,7 +10,7 @@ namespace HorusEye.Api.Controllers;
 
 [ApiController]
 [Route("api/autorizaciones")]
-[Authorize(Roles = "Usuario de Gestión")]
+[Authorize]
 public class AutorizacionesController : ControllerBase
 {
     private readonly HorusEyeDbContext _context;

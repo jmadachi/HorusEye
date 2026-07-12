@@ -19,7 +19,9 @@ public class RegisterRequest
     [Required]
     public string UserName { get; set; } = string.Empty;
     [Required]
-    public string Role { get; set; } = "Usuario de Consulta";
+    public string Role { get; set; } = "Asistente del Cliente";
+    public Guid? ProveedorId { get; set; }
+    public Guid? ClienteId { get; set; }
 }
 
 public class RefreshTokenRequest
@@ -50,6 +52,8 @@ public class UpdateUserRequest
     public string Email { get; set; } = string.Empty;
     [Required]
     public string Role { get; set; } = string.Empty;
+    public Guid? ProveedorId { get; set; }
+    public Guid? ClienteId { get; set; }
 }
 
 public class ResetPasswordRequest
@@ -67,4 +71,6 @@ public class AuthResponse
     public string Email { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
+    public Guid? ProveedorId { get; set; }
+    public Guid? ClienteId { get; set; }
 }
