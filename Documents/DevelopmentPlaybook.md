@@ -2229,6 +2229,179 @@ El usuario solicito un analisis profundo del proyecto para entender la arquitect
 
 ---
 
+## 29. Sesion: RBAC Multi-Nivel + Dispositivos RFID Configurables (12-Julio-2026)
+
+### 29.1 Resumen de Cambios
+
+Transformacion del sistema de 2 roles a 7 roles jerarquicos con aislamiento de datos, mas un sistema configurable de antenas RFID con jerarquia adaptable por cliente.
+
+**Backend - Archivos Nuevos (14):**
+| Archivo | Descripcion |
+|---|---|
+| `Core/Enums/RolSistema.cs` | 7 roles del sistema |
+| `Core/Enums/TipoDispositivo.cs` | FIXED/HANDHELD/GATE |
+| `Core/Entities/Proveedor.cs` | Entidad Proveedor |
+| `Core/Entities/Cliente.cs` | Entidad Cliente |
+| `Core/Entities/UsuarioExtendido.cs` | FK usuario -> Proveedor/Cliente |
+| `Core/Entities/DispositivoRfid.cs` | Dispositivo RFID configurable |
+| `Core/Entities/NodoUbicacion.cs` | Arbol jerarquico auto-referenciado |
+| `Core/Entities/FabricanteDispositivo.cs` | Fabricantes configurables |
+| `Core/Entities/CampoPayloadFabricante.cs` | Mapeo JSON configurable |
+| `Api/Services/PermisoService.cs` | Matriz de permisos centralizada |
+| `Api/Providers/IRfidProvider.cs` | Interfaz + RfidEvent |
+| `Api/Providers/ChainwayProvider.cs` | Parser Chainway U300 |
+| `Api/Providers/GenericProvider.cs` | Parser generico via JSON Schema |
+| `Api/DTOs/GestionDtos.cs` | DTOs para controllers nuevos |
+
+**Backend - Controllers Nuevos (5):**
+- `ProveedoresController` - CRUD proveedores
+- `ClientesController` - CRUD clientes con aislamiento
+- `DispositivosController` - CRUD dispositivos RFID
+- `NodosUbicacionController` - Arbol jerarquico de ubicaciones
+- `FabricantesController` - Gestion de fabricantes + campos payload
+
+**Frontend - Paginas Nuevas (5):**
+- `Proveedores.tsx`, `Clientes.tsx`, `Dispositivos.tsx`, `Ubicaciones.tsx`, `Fabricantes.tsx`
+
+### 29.2 Matriz de Permisos
+
+| Rol | Crear Usuarios | Gestionar Dispositivos | Ver Datos |
+|---|---|---|---|
+| AdminSistema | Todos (7 tipos) | Si | Todo |
+| AsistAdminSistema | Proveedor, Cliente | Si | Todo |
+| SoporteSistema | Ninguno | Solo lectura | Todo |
+| AdminProveedor | AsistProv, AdminCli, AsistCli (su proveedor) | Si (su proveedor) | Su proveedor |
+| AsistProveedor | Ninguno | Solo lectura | Su proveedor |
+| AdminCliente | AsistCli (su cliente) | Si (su cliente) | Su cliente |
+| AsistCliente | Ninguno | Solo lectura | Su cliente |
+
+### 29.3 Sesion: Deploy y Resolucion de Errores (12-Julio-2026)
+
+#### Paso 1: Commit y Push
+```bash
+git add .
+git commit -m "feat: RBAC multi-nivel (7 roles) + dispositivos RFID configurables"
+git push origin main
+```
+
+#### Paso 2: Pull en OCI VM
+```bash
+ssh -i ~/.ssh/id_rsa_oci ubuntu@129.146.22.246
+cd /opt/horuseye
+git pull
+```
+
+#### Paso 3: Build Docker (con --no-cache para forzar rebuild)
+```bash
+docker compose build --no-cache api
+```
+> **NOTA:** Siempre usar `--no-cache` despues de cambios en el codigo para evitar que Docker use capas viejas.
+
+#### Paso 4: Restart contenedores
+```bash
+docker compose up -d
+```
+
+#### Paso 5: Verificar
+```bash
+# Health check
+curl http://localhost:8081/health
+
+# Login con nuevos roles
+curl -X POST http://localhost:8081/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@horuseye.com","password":"Admin123!"}'
+```
+
+#### Errores Encontrados y Soluciones
+
+**Error 1: `duplicate key value violates unique constraint "PK___EFMigrationsHistory"`**
+- **Causa:** El fallback en `Program.cs` intentaba INSERTar el registro de `InitialCreate` que ya existia en la BD.
+- **Solucion:** Cambiar `INSERT INTO` por `INSERT INTO ... ON CONFLICT DO NOTHING`.
+
+**Error 2: Docker usaba imagen cacheada con codigo viejo**
+- **Causa:** `docker compose build api` reutilizaba capas cacheadas del build anterior.
+- **Solucion:** Usar `docker compose build --no-cache api` para forzar rebuild completo.
+
+**Error 3: Tunel Cloudflare caido (`Provided Tunnel token is not valid`)**
+- **Causa:** La variable `CLOUDFLARE_TUNNEL_TOKEN` no existia en `/opt/horuseye/.env`.
+- **Solucion:** Copiar el token del proyecto EBM (`/opt/ebm/Backends/Apis/dotNET10/.env`) al `.env` de HorusEye. El tunel es compartido.
+- **Token:** `eyJhIjoiNWIzMThmZmVmOTVl...` (ver `/opt/ebm/Backends/Apis/dotNET10/.env`)
+
+### 29.4 Guia de Deploy Rapido (para futuros cambios)
+
+#### Deploy Backend (cambios en C#)
+```bash
+# 1. Local: commit y push
+git add . && git commit -m "feat: descripcion" && git push
+
+# 2. OCI VM: pull + rebuild + restart
+ssh -i ~/.ssh/id_rsa_oci ubuntu@129.146.22.246
+cd /opt/horuseye
+git pull
+docker compose build --no-cache api
+docker compose up -d
+
+# 3. Verificar
+curl http://localhost:8081/health
+```
+
+#### Deploy Frontend (cambios en React/TypeScript)
+```bash
+# Automatico: push a main -> Vercel auto-deploy
+git push origin main
+
+# Manual:
+cd Frontends/ReactTS
+vercel --prod
+```
+
+#### Deploy Completo (Backend + Frontend)
+```bash
+# Local
+git add . && git commit -m "feat: descripcion" && git push
+
+# OCI VM
+ssh -i ~/.ssh/id_rsa_oci ubuntu@129.146.22.246
+cd /opt/horuseye && git pull
+docker compose build --no-cache api && docker compose up -d
+
+# Frontend (Vercel auto-deploy con el push, o manual)
+cd Frontends/ReactTS && vercel --prod
+```
+
+#### Si hay cambios en la Base de Datos (nuevas entidades/migraciones)
+```bash
+# 1. Local: crear migracion
+cd Backends/WebApi
+dotnet ef migrations add NombreDescriptivo \
+  --project HorusEye.Infrastructure \
+  --startup-project HorusEye.Api
+
+# 2. Commit y push
+git add . && git commit -m "feat: migracion NombreDescriptivo" && git push
+
+# 3. OCI VM: rebuild (la migracion se aplica automaticamente al iniciar)
+ssh -i ~/.ssh/id_rsa_oci ubuntu@129.146.22.246
+cd /opt/horuseye && git pull
+docker compose build --no-cache api && docker compose up -d
+```
+
+### 29.5 Credenciales y Acceso
+
+| Recurso | Valor |
+|---|---|
+| **OCI VM** | `ssh -i ~/.ssh/id_rsa_oci ubuntu@129.146.22.246` |
+| **Directorio deploy** | `/opt/horuseye` |
+| **API (localhost)** | `http://localhost:8081` |
+| **API (publica)** | `https://horuseye-api.mauricioadachi.dev` |
+| **Frontend** | `https://horuseye-app.mauricioadachi.dev` |
+| **Admin login** | `admin@horuseye.com` / `Admin123!` |
+| **Consulta login** | `consulta@horuseye.com` / `Consulta123!` |
+| **Tunel token** | En `/opt/ebm/Backends/Apis/dotNET10/.env` (compartido con EBM) |
+
+---
+
 > **HorusEye** — *Vigilancia y control absoluto de inventarios.*
 > 
 > **Ultima actualizacion:** 12-Julio-2026
