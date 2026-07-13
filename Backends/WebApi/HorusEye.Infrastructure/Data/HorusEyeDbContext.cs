@@ -164,6 +164,9 @@ public class HorusEyeDbContext : IdentityDbContext
                 .HasMaxLength(20);
             entity.Property(e => e.EndpointAPI).HasMaxLength(500);
             entity.Property(e => e.MetodoHTTP).HasMaxLength(10);
+            entity.Property(e => e.DireccionPredeterminada).HasMaxLength(20);
+            entity.Property(e => e.ApiKey).HasMaxLength(200);
+            entity.HasIndex(e => e.ApiKey);
             entity.HasIndex(e => e.DireccionIP);
             entity.HasOne(e => e.Cliente)
                 .WithMany(c => c.Dispositivos)

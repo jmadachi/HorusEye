@@ -18,6 +18,9 @@ public class DispositivoRfid
     public string? EndpointAPI { get; set; }
     public string? MetodoHTTP { get; set; } = "POST";
     public Guid? FabricanteDispositivoId { get; set; }
+    public string? DireccionPredeterminada { get; set; } = "BIDIRECCIONAL";
+    public string? ApiKey { get; set; }
+    public bool RequiereDireccion { get; set; }
     public bool Activo { get; set; } = true;
     public DateTimeOffset FechaRegistro { get; set; } = DateTimeOffset.UtcNow;
 

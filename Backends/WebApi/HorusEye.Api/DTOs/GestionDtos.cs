@@ -92,6 +92,11 @@ public class DispositivoRequest
     [StringLength(10)]
     public string? MetodoHTTP { get; set; }
     public Guid? FabricanteDispositivoId { get; set; }
+    [StringLength(20)]
+    public string? DireccionPredeterminada { get; set; }
+    [StringLength(200)]
+    public string? ApiKey { get; set; }
+    public bool RequiereDireccion { get; set; }
 }
 
 public class DispositivoResponse
@@ -113,6 +118,9 @@ public class DispositivoResponse
     public string? EndpointAPI { get; set; }
     public string? MetodoHTTP { get; set; }
     public Guid? FabricanteDispositivoId { get; set; }
+    public string? DireccionPredeterminada { get; set; }
+    public string? ApiKey { get; set; }
+    public bool RequiereDireccion { get; set; }
     public bool Activo { get; set; }
     public DateTimeOffset FechaRegistro { get; set; }
 }

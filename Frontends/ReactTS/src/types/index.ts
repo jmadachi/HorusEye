@@ -135,6 +135,9 @@ export interface DispositivoRfid {
   endpointAPI: string | null;
   metodoHTTP: string | null;
   fabricanteDispositivoId: string | null;
+  direccionPredeterminada: string | null;
+  apiKey: string | null;
+  requiereDireccion: boolean;
   activo: boolean;
   fechaRegistro: string;
 }

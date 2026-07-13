@@ -47,6 +47,22 @@ public class EventosRfidController : ControllerBase
     public async Task<ActionResult<ApiResponse<EventoRfidResponse>>> ProcesarEventoPorProvider(
         string providerNombre)
     {
+        // Validar API Key del dispositivo
+        var apiKey = Request.Headers["X-Api-Key"].FirstOrDefault();
+        DispositivoRfid? dispositivo = null;
+
+        if (!string.IsNullOrEmpty(apiKey))
+        {
+            dispositivo = await _context.DispositivosRfid
+                .FirstOrDefaultAsync(d => d.ApiKey == apiKey && d.Activo);
+
+            if (dispositivo == null)
+            {
+                _logger.LogWarning("API Key invalida o dispositivo inactivo: {ApiKey}", apiKey[..Math.Min(8, apiKey.Length)]);
+                return Unauthorized(ApiResponse<EventoRfidResponse>.Fail("API Key invalida o dispositivo inactivo"));
+            }
+        }
+
         IRfidProvider provider = providerNombre.ToLowerInvariant() switch
         {
             "chainway" => new ChainwayProvider(),
@@ -72,13 +88,37 @@ public class EventosRfidController : ControllerBase
         if (!provider.ValidatePayload(System.Text.Json.JsonSerializer.Serialize(rfidEvent.RawData)))
             return BadRequest(ApiResponse<EventoRfidResponse>.Fail("Payload invalido"));
 
-        var dispositivo = await _context.DispositivosRfid
-            .FirstOrDefaultAsync(d => d.Nombre == rfidEvent.DeviceId || d.DireccionIP == rfidEvent.DeviceId);
+        // Buscar dispositivo por API key, luego por IP, luego por nombre
+        dispositivo ??= await _context.DispositivosRfid
+            .FirstOrDefaultAsync(d =>
+                (d.DireccionIP != null && d.DireccionIP == rfidEvent.DeviceId) ||
+                d.Nombre == rfidEvent.DeviceId);
+
+        // Determinar tipo de movimiento
+        string tipoMovimiento;
+
+        if (rfidEvent.RawData.TryGetValue("tipoMovimiento", out var tipoFromPayload)
+            && !string.IsNullOrEmpty(tipoFromPayload))
+        {
+            // El dispositivo envia el tipo en el payload
+            tipoMovimiento = tipoFromPayload.ToUpperInvariant();
+        }
+        else if (dispositivo?.DireccionPredeterminada == "ENTRADA"
+              || dispositivo?.DireccionPredeterminada == "SALIDA")
+        {
+            // El dispositivo tiene una direccion fija configurada
+            tipoMovimiento = dispositivo.DireccionPredeterminada == "ENTRADA" ? "INGRESO" : "SALIDA";
+        }
+        else
+        {
+            // Default: INGRESO (dispositivo bidireccional o sin configurar)
+            tipoMovimiento = "INGRESO";
+        }
 
         return await ProcesarEventoInterno(
             rfidEvent.EPC,
             rfidEvent.DeviceId,
-            "INGRESO",
+            tipoMovimiento,
             dispositivo?.Id);
     }
 
@@ -218,8 +258,8 @@ public class EventosRfidController : ControllerBase
             .SendAsync("NuevoMovimiento", movimientoMsg);
 
         _logger.LogInformation(
-            "RFID Evento: TAG {TagId} | Activo {Placa} | {Tipo} | Autorizado: {Autorizado} | Alarma: {Alarma}",
-            tagId, activo.Placa, tipoMovimiento, autorizado, activarAlarma);
+            "RFID Evento: TAG {TagId} | Activo {Placa} | {Tipo} | Autorizado: {Autorizado} | Alarma: {Alarma} | Dispositivo: {Dispositivo}",
+            tagId, activo.Placa, tipoMovimiento, autorizado, activarAlarma, dispositivoRfidId);
 
         return Ok(ApiResponse<EventoRfidResponse>.Ok(response,
             response.Mensaje));

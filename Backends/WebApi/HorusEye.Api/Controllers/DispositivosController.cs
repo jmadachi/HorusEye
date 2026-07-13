@@ -85,6 +85,9 @@ public class DispositivosController : ControllerBase
                 EndpointAPI = d.EndpointAPI,
                 MetodoHTTP = d.MetodoHTTP,
                 FabricanteDispositivoId = d.FabricanteDispositivoId,
+                DireccionPredeterminada = d.DireccionPredeterminada,
+                ApiKey = d.ApiKey,
+                RequiereDireccion = d.RequiereDireccion,
                 Activo = d.Activo,
                 FechaRegistro = d.FechaRegistro
             })
@@ -124,6 +127,9 @@ public class DispositivosController : ControllerBase
             EndpointAPI = dispositivo.EndpointAPI,
             MetodoHTTP = dispositivo.MetodoHTTP,
             FabricanteDispositivoId = dispositivo.FabricanteDispositivoId,
+            DireccionPredeterminada = dispositivo.DireccionPredeterminada,
+            ApiKey = dispositivo.ApiKey,
+            RequiereDireccion = dispositivo.RequiereDireccion,
             Activo = dispositivo.Activo,
             FechaRegistro = dispositivo.FechaRegistro
         }));
@@ -156,7 +162,10 @@ public class DispositivosController : ControllerBase
             TipoDispositivo = Enum.Parse<TipoDispositivo>(request.TipoDispositivo),
             EndpointAPI = request.EndpointAPI,
             MetodoHTTP = request.MetodoHTTP ?? "POST",
-            FabricanteDispositivoId = request.FabricanteDispositivoId
+            FabricanteDispositivoId = request.FabricanteDispositivoId,
+            DireccionPredeterminada = request.DireccionPredeterminada ?? "BIDIRECCIONAL",
+            ApiKey = request.ApiKey,
+            RequiereDireccion = request.RequiereDireccion
         };
 
         _context.DispositivosRfid.Add(dispositivo);
@@ -193,6 +202,9 @@ public class DispositivosController : ControllerBase
         dispositivo.EndpointAPI = request.EndpointAPI;
         dispositivo.MetodoHTTP = request.MetodoHTTP ?? "POST";
         dispositivo.FabricanteDispositivoId = request.FabricanteDispositivoId;
+        dispositivo.DireccionPredeterminada = request.DireccionPredeterminada ?? "BIDIRECCIONAL";
+        dispositivo.ApiKey = request.ApiKey;
+        dispositivo.RequiereDireccion = request.RequiereDireccion;
 
         await _context.SaveChangesAsync();
 

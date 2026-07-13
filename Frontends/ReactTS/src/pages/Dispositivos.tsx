@@ -13,7 +13,7 @@ export default function Dispositivos() {
   const [pageSize, setPageSize] = useState(10);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<DispositivoRfid | null>(null);
-  const [form, setForm] = useState({ nombre: '', fabricante: '', modelo: '', direccionIP: '', ubicacion: '', clienteId: '', tipoDispositivo: 'FIXED', endpointAPI: '' });
+  const [form, setForm] = useState({ nombre: '', fabricante: '', modelo: '', direccionIP: '', ubicacion: '', clienteId: '', tipoDispositivo: 'FIXED', endpointAPI: '', direccionPredeterminada: 'BIDIRECCIONAL', apiKey: '', requiereDireccion: false });
   const [deleteTarget, setDeleteTarget] = useState<DispositivoRfid | null>(null);
 
   const canManage = hasRole(['Administrador del Sistema', 'Asistente del Administrador del Sistema', 'Administrador del Proveedor', 'Administrador del Cliente']);
@@ -35,8 +35,8 @@ export default function Dispositivos() {
 
   useEffect(() => { load(1); loadClientes(); }, [pageSize]);
 
-  const openCreate = () => { setEditing(null); setForm({ nombre: '', fabricante: 'Chainway', modelo: 'U300', direccionIP: '', ubicacion: '', clienteId: '', tipoDispositivo: 'FIXED', endpointAPI: '' }); setShowModal(true); };
-  const openEdit = (d: DispositivoRfid) => { setEditing(d); setForm({ nombre: d.nombre, fabricante: d.fabricante, modelo: d.modelo, direccionIP: d.direccionIP || '', ubicacion: d.ubicacion || '', clienteId: d.clienteId || '', tipoDispositivo: d.tipoDispositivo, endpointAPI: d.endpointAPI || '' }); setShowModal(true); };
+  const openCreate = () => { setEditing(null); setForm({ nombre: '', fabricante: 'Chainway', modelo: 'U300', direccionIP: '', ubicacion: '', clienteId: '', tipoDispositivo: 'FIXED', endpointAPI: '', direccionPredeterminada: 'BIDIRECCIONAL', apiKey: '', requiereDireccion: false }); setShowModal(true); };
+  const openEdit = (d: DispositivoRfid) => { setEditing(d); setForm({ nombre: d.nombre, fabricante: d.fabricante, modelo: d.modelo, direccionIP: d.direccionIP || '', ubicacion: d.ubicacion || '', clienteId: d.clienteId || '', tipoDispositivo: d.tipoDispositivo, endpointAPI: d.endpointAPI || '', direccionPredeterminada: d.direccionPredeterminada || 'BIDIRECCIONAL', apiKey: d.apiKey || '', requiereDireccion: d.requiereDireccion }); setShowModal(true); };
 
   const save = async () => {
     const body = { ...form, clienteId: form.clienteId || null };
@@ -74,6 +74,7 @@ export default function Dispositivos() {
                 <th className="px-4 py-3 text-left dark:text-gray-200">Modelo</th>
                 <th className="px-4 py-3 text-left dark:text-gray-200">Cliente</th>
                 <th className="px-4 py-3 text-left dark:text-gray-200">Tipo</th>
+                <th className="px-4 py-3 text-left dark:text-gray-200">Direccion</th>
                 {canManage && <th className="px-4 py-3 text-left dark:text-gray-200">Acciones</th>}
               </tr>
             </thead>
@@ -85,6 +86,7 @@ export default function Dispositivos() {
                   <td className="px-4 py-3 dark:text-gray-200">{d.modelo}</td>
                   <td className="px-4 py-3 dark:text-gray-200">{d.clienteNombre || '-'}</td>
                   <td className="px-4 py-3"><span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{d.tipoDispositivo}</span></td>
+                  <td className="px-4 py-3"><span className={`px-2 py-1 text-xs rounded-full ${d.direccionPredeterminada === 'ENTRADA' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : d.direccionPredeterminada === 'SALIDA' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}>{d.direccionPredeterminada || 'BIDIRECCIONAL'}</span></td>
                   {canManage && (
                     <td className="px-4 py-3 flex gap-2">
                       <button onClick={() => openEdit(d)} className="text-blue-500 hover:text-blue-700"><Pencil size={16} /></button>
@@ -130,6 +132,22 @@ export default function Dispositivos() {
                 <option value="GATE">Arco</option>
               </select>
               <input placeholder="Endpoint API" value={form.endpointAPI} onChange={e => setForm({ ...form, endpointAPI: e.target.value })} className="w-full border dark:border-gray-600 rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" />
+              <div>
+                <label className="block text-xs font-medium mb-1 dark:text-gray-300">Direccion Predeterminada</label>
+                <select value={form.direccionPredeterminada} onChange={e => setForm({ ...form, direccionPredeterminada: e.target.value })} className="w-full border dark:border-gray-600 rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">
+                  <option value="BIDIRECCIONAL">Bidireccional (el dispositivo indica)</option>
+                  <option value="ENTRADA">Entrada (siempre INGRESO)</option>
+                  <option value="SALIDA">Salida (siempre SALIDA)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 dark:text-gray-300">API Key del Dispositivo</label>
+                <input placeholder="Clave unica para autenticar este dispositivo" value={form.apiKey} onChange={e => setForm({ ...form, apiKey: e.target.value })} className="w-full border dark:border-gray-600 rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200 font-mono text-sm" />
+              </div>
+              <label className="flex items-center gap-2 dark:text-gray-200 text-sm">
+                <input type="checkbox" checked={form.requiereDireccion} onChange={e => setForm({ ...form, requiereDireccion: e.target.checked })} className="rounded" />
+                Requiere que el dispositivo envie tipoMovimiento
+              </label>
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Cancelar</button>
