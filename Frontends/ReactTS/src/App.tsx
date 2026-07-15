@@ -15,6 +15,7 @@ import Clientes from './pages/Clientes';
 import Dispositivos from './pages/Dispositivos';
 import Ubicaciones from './pages/Ubicaciones';
 import Fabricantes from './pages/Fabricantes';
+import NfcTester from './pages/NfcTester';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
             <Route path="/dispositivos" element={<Dispositivos />} />
             <Route path="/ubicaciones" element={<Ubicaciones />} />
             <Route path="/fabricantes" element={<Fabricantes />} />
+            <Route path="/nfc-tester" element={<NfcTester />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
