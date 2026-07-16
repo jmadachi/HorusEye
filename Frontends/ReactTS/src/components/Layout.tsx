@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   LayoutDashboard, Package, Tags, FileText, LogOut, Menu, X, Eye, Shield, Users, Sun, Moon, ShieldCheck,
-  Building2, UsersRound, Cpu, MapPin, Factory, Smartphone
+  Building2, UsersRound, Cpu, MapPin, Factory, Smartphone, Zap
 } from 'lucide-react';
 import { ROLES } from '../types';
 
@@ -41,6 +41,9 @@ export default function Layout() {
       : []),
     ...(hasRole(adminRoles)
       ? [{ to: '/fabricantes', label: 'Fabricantes', icon: Factory }]
+      : []),
+    ...(hasRole(adminRoles)
+      ? [{ to: '/eventos', label: 'Eventos', icon: Zap }]
       : []),
     { to: '/nfc-tester', label: 'NFC Tester', icon: Smartphone },
   ];

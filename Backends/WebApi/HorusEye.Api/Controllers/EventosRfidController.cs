@@ -2,6 +2,7 @@ using HorusEye.Api.DTOs;
 using HorusEye.Api.Hubs;
 using HorusEye.Api.Models;
 using HorusEye.Api.Providers;
+using HorusEye.Api.Services;
 using HorusEye.Core.Entities;
 using HorusEye.Core.Enums;
 using HorusEye.Infrastructure.Data;
@@ -21,17 +22,20 @@ public class EventosRfidController : ControllerBase
     private readonly IMemoryCache _cache;
     private readonly IHubContext<MovimientosHub> _hubContext;
     private readonly ILogger<EventosRfidController> _logger;
+    private readonly EventDetectionService _eventDetection;
 
     public EventosRfidController(
         HorusEyeDbContext context,
         IMemoryCache cache,
         IHubContext<MovimientosHub> hubContext,
-        ILogger<EventosRfidController> logger)
+        ILogger<EventosRfidController> logger,
+        EventDetectionService eventDetection)
     {
         _context = context;
         _cache = cache;
         _hubContext = hubContext;
         _logger = logger;
+        _eventDetection = eventDetection;
     }
 
     [HttpPost]
@@ -39,7 +43,7 @@ public class EventosRfidController : ControllerBase
     public async Task<ActionResult<ApiResponse<EventoRfidResponse>>> ProcesarEvento(
         [FromBody] EventoRfidRequest request)
     {
-        return await ProcesarEventoInterno(request.TagId, request.PuntoLecturaId, request.TipoMovimiento, null);
+        return await ProcesarEventoInterno(request.TagId, request.PuntoLecturaId, request.TipoMovimiento ?? "INGRESO", null);
     }
 
     [HttpPost("{providerNombre}")]
@@ -66,6 +70,7 @@ public class EventosRfidController : ControllerBase
         IRfidProvider provider = providerNombre.ToLowerInvariant() switch
         {
             "chainway" => new ChainwayProvider(),
+            "nfc-tester" => new NfcTesterProvider(),
             _ => await GetGenericProvider(providerNombre)
         };
 
@@ -108,6 +113,15 @@ public class EventosRfidController : ControllerBase
         {
             // El dispositivo tiene una direccion fija configurada
             tipoMovimiento = dispositivo.DireccionPredeterminada == "ENTRADA" ? "INGRESO" : "SALIDA";
+        }
+        else if (dispositivo != null)
+        {
+            // Intentar detectar evento por secuencia de lectores
+            var eventoDetectado = await _eventDetection.RegistrarLectura(rfidEvent.EPC, dispositivo.Id);
+            tipoMovimiento = eventoDetectado ?? "INGRESO";
+
+            if (eventoDetectado != null)
+                _logger.LogInformation("Evento detectado por secuencia: {Evento} para TAG {TagId}", eventoDetectado, rfidEvent.EPC);
         }
         else
         {

@@ -23,6 +23,8 @@ public class HorusEyeDbContext : IdentityDbContext
     public DbSet<NodoUbicacion> NodosUbicacion => Set<NodoUbicacion>();
     public DbSet<FabricanteDispositivo> FabricantesDispositivo => Set<FabricanteDispositivo>();
     public DbSet<CampoPayloadFabricante> CamposPayloadFabricante => Set<CampoPayloadFabricante>();
+    public DbSet<Evento> Eventos => Set<Evento>();
+    public DbSet<EventoLector> EventosLectores => Set<EventoLector>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -223,6 +225,35 @@ public class HorusEyeDbContext : IdentityDbContext
                 .HasForeignKey(e => e.FabricanteDispositivoId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => new { e.FabricanteDispositivoId, e.NombreCampoExterno }).IsUnique();
+        });
+
+        builder.Entity<Evento>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).HasMaxLength(200);
+            entity.HasIndex(e => new { e.NodoUbicacionId, e.Nombre }).IsUnique();
+            entity.HasOne(e => e.NodoUbicacion)
+                .WithMany()
+                .HasForeignKey(e => e.NodoUbicacionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Cliente)
+                .WithMany()
+                .HasForeignKey(e => e.ClienteId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<EventoLector>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.EventoId, e.Orden }).IsUnique();
+            entity.HasOne(e => e.Evento)
+                .WithMany(ev => ev.Lectores)
+                .HasForeignKey(e => e.EventoId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.DispositivoRfid)
+                .WithMany()
+                .HasForeignKey(e => e.DispositivoRfidId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -154,6 +154,23 @@ export interface NodoUbicacion {
   children?: NodoUbicacion[];
 }
 
+export interface EventoLector {
+  id: string;
+  dispositivoRfidId: string;
+  dispositivoNombre: string | null;
+  orden: number;
+}
+
+export interface Evento {
+  id: string;
+  nombre: string;
+  nodoUbicacionId: string;
+  nodoUbicacionNombre: string | null;
+  clienteId: string;
+  activo: boolean;
+  lectores: EventoLector[];
+}
+
 export interface FabricanteDispositivo {
   id: string;
   nombre: string;

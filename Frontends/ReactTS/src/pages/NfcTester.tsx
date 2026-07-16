@@ -1,5 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Smartphone, Wifi, WifiOff, CheckCircle, XCircle, Send } from 'lucide-react';
+import api from '../services/api';
+import type { DispositivoRfid, ApiResponse } from '../types';
 
 type Status = 'idle' | 'listening' | 'reading' | 'sending' | 'success' | 'error';
 
@@ -9,38 +11,58 @@ interface LogEntry {
   tagId: string;
   status: 'success' | 'error';
   message: string;
-  tipo: string;
+  dispositivo: string;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://horuseye-api.mauricioadachi.dev';
 
 export default function NfcTester() {
   const [status, setStatus] = useState<Status>('idle');
-  const [tipoMovimiento, setTipoMovimiento] = useState<'INGRESO' | 'SALIDA'>('INGRESO');
-  const [puntoLectura, setPuntoLectura] = useState('PUERTA-01');
+  const [dispositivos, setDispositivos] = useState<DispositivoRfid[]>([]);
+  const [dispositivoSeleccionado, setDispositivoSeleccionado] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [lastTag, setLastTag] = useState<string | null>(null);
   const logId = useRef(0);
   const readerRef = useRef<any>(null);
 
-  const addLog = useCallback((tagId: string, status: 'success' | 'error', message: string, tipo: string) => {
+  useEffect(() => {
+    const loadDispositivos = async () => {
+      try {
+        const { data } = await api.get('/api/dispositivos?pageSize=200') as { data: ApiResponse<{ items: DispositivoRfid[] }> };
+        if (data.success) {
+          const handhelds = data.data.items.filter(d =>
+            (d.tipoDispositivo === 'HANDHELD' || d.tipoDispositivo === 'FIXED') && d.activo
+          );
+          setDispositivos(handhelds);
+          if (handhelds.length > 0) setDispositivoSeleccionado(handhelds[0].id);
+        }
+      } catch { /* silently fail */ }
+    };
+    loadDispositivos();
+  }, []);
+
+  const addLog = useCallback((tagId: string, status: 'success' | 'error', message: string, dispositivo: string) => {
     logId.current += 1;
     const now = new Date();
     const time = now.toLocaleTimeString('es-ES');
-    setLogs(prev => [{ id: logId.current, time, tagId, status, message, tipo }, ...prev].slice(0, 50));
+    setLogs(prev => [{ id: logId.current, time, tagId, status, message, dispositivo }, ...prev].slice(0, 50));
   }, []);
 
   const sendToApi = async (uid: string): Promise<{ ok: boolean; message: string }> => {
-    const payload = {
-      tagId: uid,
-      puntoLecturaId: puntoLectura,
-      tipoMovimiento: tipoMovimiento,
-    };
+    const dispositivo = dispositivos.find(d => d.id === dispositivoSeleccionado);
+    if (!dispositivo) return { ok: false, message: 'No hay dispositivo seleccionado' };
 
-    const res = await fetch(`${API_BASE}/api/eventos-rfid`, {
+    const res = await fetch(`${API_BASE}/api/eventos-rfid/nfc-tester`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': dispositivo.apiKey || '',
+      },
+      body: JSON.stringify({
+        epc: uid,
+        reader_id: dispositivo.nombre,
+        timestamp: new Date().toISOString(),
+      }),
     });
 
     const data = await res.json();
@@ -68,14 +90,16 @@ export default function NfcTester() {
         setLastTag(uid);
         setStatus('reading');
 
+        const dispositivo = dispositivos.find(d => d.id === dispositivoSeleccionado);
+
         try {
           setStatus('sending');
           const result = await sendToApi(uid);
           setStatus(result.ok ? 'success' : 'error');
-          addLog(uid, result.ok ? 'success' : 'error', result.message, tipoMovimiento);
+          addLog(uid, result.ok ? 'success' : 'error', result.message, dispositivo?.nombre || '-');
         } catch (err: any) {
           setStatus('error');
-          addLog(uid, 'error', err.message || 'Error de conexion', tipoMovimiento);
+          addLog(uid, 'error', err.message || 'Error de conexion', dispositivo?.nombre || '-');
         }
 
         setTimeout(() => setStatus('listening'), 2000);
@@ -124,31 +148,25 @@ export default function NfcTester() {
       {/* Config */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow space-y-4">
         <h2 className="font-semibold text-gray-700 dark:text-gray-200">Configuracion</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">
-              Tipo de Movimiento
-            </label>
-            <select
-              value={tipoMovimiento}
-              onChange={e => setTipoMovimiento(e.target.value as 'INGRESO' | 'SALIDA')}
-              className="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            >
-              <option value="INGRESO">INGRESO</option>
-              <option value="SALIDA">SALIDA</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">
-              Punto de Lectura
-            </label>
-            <input
-              type="text"
-              value={puntoLectura}
-              onChange={e => setPuntoLectura(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">
+            Dispositivo Lector
+          </label>
+          <select
+            value={dispositivoSeleccionado}
+            onChange={e => setDispositivoSeleccionado(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          >
+            {dispositivos.length === 0 && <option value="">No hay dispositivos registrados</option>}
+            {dispositivos.map(d => (
+              <option key={d.id} value={d.id}>
+                {d.nombre} ({d.tipoDispositivo}){d.nodoUbicacionNombre ? ` — ${d.nodoUbicacionNombre}` : ''}
+              </option>
+            ))}
+          </select>
+          {dispositivos.length === 0 && (
+            <p className="text-xs text-gray-400 mt-1">Registra un dispositivo en /dispositivos primero.</p>
+          )}
         </div>
       </div>
 
@@ -168,7 +186,8 @@ export default function NfcTester() {
         {status === 'idle' ? (
           <button
             onClick={startListening}
-            className="px-6 py-3 bg-[#1e3a5f] hover:bg-[#2d5a8e] text-white rounded-lg font-medium transition"
+            disabled={!dispositivoSeleccionado}
+            className="px-6 py-3 bg-[#1e3a5f] hover:bg-[#2d5a8e] text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Iniciar Lectura NFC
           </button>
@@ -182,7 +201,7 @@ export default function NfcTester() {
         )}
 
         <p className="text-xs text-gray-400">
-          Endpoint: <code className="font-mono">{API_BASE}/api/eventos-rfid</code>
+          Endpoint: <code className="font-mono">{API_BASE}/api/eventos-rfid/nfc-tester</code>
         </p>
       </div>
 
@@ -205,7 +224,7 @@ export default function NfcTester() {
                   {log.tagId}
                 </span>
                 <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
-                  {log.tipo}
+                  {log.dispositivo}
                 </span>
                 <span className="text-gray-700 dark:text-gray-300 flex-1">{log.message}</span>
               </div>

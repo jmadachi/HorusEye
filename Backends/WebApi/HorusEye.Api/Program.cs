@@ -100,6 +100,7 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<PermisoService>();
+builder.Services.AddSingleton<EventDetectionService>();
 
 var allowedOrigin = builder.Configuration["CORS__AllowedOrigin"];
 

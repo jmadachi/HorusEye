@@ -203,3 +203,42 @@ public class CampoPayloadResponse
     public string? ValorDefecto { get; set; }
     public int OrdenExtraccion { get; set; }
 }
+
+// === Evento ===
+
+public class EventoRequest
+{
+    [Required, StringLength(200)]
+    public string Nombre { get; set; } = string.Empty;
+    [Required]
+    public Guid NodoUbicacionId { get; set; }
+    [Required]
+    public Guid ClienteId { get; set; }
+    public List<EventoLectorRequest> Lectores { get; set; } = new();
+}
+
+public class EventoLectorRequest
+{
+    [Required]
+    public Guid DispositivoRfidId { get; set; }
+    public int Orden { get; set; }
+}
+
+public class EventoResponse
+{
+    public Guid Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public Guid NodoUbicacionId { get; set; }
+    public string? NodoUbicacionNombre { get; set; }
+    public Guid ClienteId { get; set; }
+    public bool Activo { get; set; }
+    public List<EventoLectorResponse> Lectores { get; set; } = new();
+}
+
+public class EventoLectorResponse
+{
+    public Guid Id { get; set; }
+    public Guid DispositivoRfidId { get; set; }
+    public string? DispositivoNombre { get; set; }
+    public int Orden { get; set; }
+}
