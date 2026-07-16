@@ -62,9 +62,14 @@ public class HorusEyeDbContext : IdentityDbContext
             entity.Property(e => e.EstadoUbicacion)
                 .HasConversion<string>()
                 .HasMaxLength(30);
+            entity.HasIndex(e => e.ClienteId);
             entity.HasOne(e => e.Tag)
                 .WithOne(e => e.Activo)
                 .HasForeignKey<Activo>(e => e.TagId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.Cliente)
+                .WithMany()
+                .HasForeignKey(e => e.ClienteId)
                 .OnDelete(DeleteBehavior.SetNull);
             entity.HasMany(e => e.Movimientos)
                 .WithOne(e => e.Activo)

@@ -10,13 +10,26 @@ interface User {
   roles: string[];
 }
 
+interface Proveedor {
+  id: string;
+  nombre: string;
+}
+
+interface Cliente {
+  id: string;
+  nombre: string;
+}
+
 type ModalType = 'register' | 'edit' | 'reset-password' | null;
+
+const ROLES_REQUIEREN_PROVEEDOR = ['Administrador del Proveedor', 'Asistente del Proveedor', 'Administrador del Cliente', 'Asistente del Cliente'];
+const ROLES_REQUIEREN_CLIENTE = ['Administrador del Cliente', 'Asistente del Cliente'];
 
 export default function Usuarios() {
   const [users, setUsers] = useState<User[]>([]);
   const [modalType, setModalType] = useState<ModalType>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [form, setForm] = useState({ email: '', password: '', userName: '', role: 'Asistente del Cliente' });
+  const [form, setForm] = useState({ email: '', password: '', userName: '', role: 'Asistente del Cliente', proveedorId: '', clienteId: '' });
   const [resetPassword, setResetPassword] = useState('');
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
@@ -24,6 +37,8 @@ export default function Usuarios() {
   const [pageSize, setPageSize] = useState(15);
   const totalPages = Math.ceil(total / pageSize);
   const { hasRole, user: currentUser } = useAuth();
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
 
   const loadUsers = async (p?: number, ps?: number) => {
     try {
@@ -41,18 +56,33 @@ export default function Usuarios() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUsers(1);
+    loadProveedores();
   }, []);
+
+  const loadProveedores = async () => {
+    try {
+      const { data } = await api.get('/api/proveedores?page=1&pageSize=100');
+      if (data.success) setProveedores(data.data.items);
+    } catch { /* ignore */ }
+  };
+
+  const loadClientes = async (proveedorId: string) => {
+    try {
+      const { data } = await api.get(`/api/clientes?proveedorId=${proveedorId}&page=1&pageSize=100`);
+      if (data.success) setClientes(data.data.items);
+    } catch { /* ignore */ }
+  };
 
   const openRegister = () => {
     setSelectedUser(null);
-    setForm({ email: '', password: '', userName: '', role: 'Usuario de Consulta' });
+    setForm({ email: '', password: '', userName: '', role: 'Asistente del Cliente', proveedorId: '', clienteId: '' });
     setError('');
     setModalType('register');
   };
 
   const openEdit = (u: User) => {
     setSelectedUser(u);
-    setForm({ email: u.email, password: '', userName: u.userName, role: u.roles[0] || 'Usuario de Consulta' });
+    setForm({ email: u.email, password: '', userName: u.userName, role: u.roles[0] || 'Asistente del Cliente', proveedorId: '', clienteId: '' });
     setError('');
     setModalType('edit');
   };
@@ -67,12 +97,24 @@ export default function Usuarios() {
   const handleRegister = async () => {
     setError('');
     try {
-      await api.post('/api/auth/register', form);
+      const payload: Record<string, string> = {
+        email: form.email,
+        password: form.password,
+        userName: form.userName,
+        role: form.role
+      };
+      if (ROLES_REQUIEREN_PROVEEDOR.includes(form.role) && form.proveedorId) {
+        payload.proveedorId = form.proveedorId;
+      }
+      if (ROLES_REQUIEREN_CLIENTE.includes(form.role) && form.clienteId) {
+        payload.clienteId = form.clienteId;
+      }
+      await api.post('/api/auth/register', payload);
       setModalType(null);
       loadUsers(1);
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(axiosErr.response?.data?.message || 'Error al registrar usuario');
+      const axiosErr = err as { response?: { data?: { message?: string; errors?: string[] } } };
+      setError(axiosErr.response?.data?.errors?.[0] || axiosErr.response?.data?.message || 'Error al registrar usuario');
     }
   };
 
@@ -243,6 +285,8 @@ export default function Usuarios() {
         form={form} setForm={setForm}
         error={error} onSave={handleRegister} onCancel={() => setModalType(null)}
         saveLabel="Registrar" showPassword
+        proveedores={proveedores} clientes={clientes}
+        loadClientes={loadClientes}
       />}
 
       {/* Edit Modal */}
@@ -251,6 +295,8 @@ export default function Usuarios() {
         form={form} setForm={setForm}
         error={error} onSave={handleEdit} onCancel={() => setModalType(null)}
         saveLabel="Guardar" showPassword={false}
+        proveedores={proveedores} clientes={clientes}
+        loadClientes={loadClientes}
       />}
 
       {/* Reset Password Modal */}
@@ -290,16 +336,20 @@ export default function Usuarios() {
 }
 
 function UserFormModal({
-  title, form, setForm, error, onSave, onCancel, saveLabel, showPassword
+  title, form, setForm, error, onSave, onCancel, saveLabel, showPassword,
+  proveedores, clientes, loadClientes
 }: {
   title: string;
-  form: { email: string; password: string; userName: string; role: string };
+  form: { email: string; password: string; userName: string; role: string; proveedorId: string; clienteId: string };
   setForm: (f: typeof form) => void;
   error: string;
   onSave: () => void;
   onCancel: () => void;
   saveLabel: string;
   showPassword: boolean;
+  proveedores: Proveedor[];
+  clientes: Cliente[];
+  loadClientes: (proveedorId: string) => void;
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -335,7 +385,13 @@ function UserFormModal({
           <div>
             <label className="block text-sm font-medium mb-1 dark:text-gray-200">Rol</label>
             <select value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              onChange={(e) => {
+                const newRole = e.target.value;
+                setForm({ ...form, role: newRole, proveedorId: '', clienteId: '' });
+                if (ROLES_REQUIEREN_CLIENTE.includes(newRole) && form.proveedorId) {
+                  loadClientes(form.proveedorId);
+                }
+              }}
               className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]">
               <option value="Administrador del Sistema">Administrador del Sistema</option>
               <option value="Asistente del Administrador del Sistema">Asistente del Administrador del Sistema</option>
@@ -346,6 +402,38 @@ function UserFormModal({
               <option value="Asistente del Cliente">Asistente del Cliente</option>
             </select>
           </div>
+          {ROLES_REQUIEREN_PROVEEDOR.includes(form.role) && (
+            <div>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">Proveedor *</label>
+              <select value={form.proveedorId}
+                onChange={(e) => {
+                  const newProveedorId = e.target.value;
+                  setForm({ ...form, proveedorId: newProveedorId, clienteId: '' });
+                  if (ROLES_REQUIEREN_CLIENTE.includes(form.role) && newProveedorId) {
+                    loadClientes(newProveedorId);
+                  }
+                }}
+                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]">
+                <option value="">Seleccionar proveedor...</option>
+                {proveedores.map(p => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {ROLES_REQUIEREN_CLIENTE.includes(form.role) && form.proveedorId && (
+            <div>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">Cliente *</label>
+              <select value={form.clienteId}
+                onChange={(e) => setForm({ ...form, clienteId: e.target.value })}
+                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]">
+                <option value="">Seleccionar cliente...</option>
+                {clientes.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={onCancel}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 rounded cursor-pointer">
