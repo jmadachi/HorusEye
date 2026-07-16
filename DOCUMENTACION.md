@@ -1,10 +1,66 @@
 # HorusEye - Control de Inventarios RFID
 
-> Documentación de estado actual. Última actualización: 2026-07-05
+> Documentación de estado actual. Última actualización: 2026-07-16
 
-## Resumen
+## Visión del Proyecto
 
-HorusEye es un sistema de control de inventarios y activos en tiempo real mediante lectores RFID. Rastrea entrada/salida de productos en múltiples almacenes usando lectores RFID (ecosistema Keonn/AdvanNet), proyecta datos en un dashboard dinámico y proporciona auditorías.
+**HorusEye** es un sistema de control de inventarios y activos en tiempo real mediante dispositivos RFID.
+
+### Objetivo Principal
+
+Conectar a **cualquier dispositivo** (Reader) que reciba señales de tags RFID, obtener la información de las lecturas, y generar **KPIs, Reportes y Dashboards**.
+
+### Flujo de Datos
+
+```
+TAGs (señales RFID) 
+    → Reader (dispositivo que recibe la señal)
+        → HorusEye (procesa la información)
+            → KPIs, Reportes, Dashboards
+```
+
+### Métodos de Conexión con Readers
+
+| Método | Descripción | Ejemplo | Estado |
+|--------|-------------|---------|--------|
+| **Conexión directa vía LAN** | El Reader envía HTTP POST al servidor | Keonn/AdvanNet (AdvanNet) | ✅ Implementado |
+| **API del fabricante** | HorusEye consulta la API cloud del fabricante | Tuya, eWeLink, RFIDLink | 🔵 Pendiente |
+| **NFC del celular** | Herramienta de prueba/demostración | NFC Tester | ⚠️ Solo para pruebas |
+
+### Arquitectura de Integración
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    FUENTES DE DATOS                         │
+├─────────────────────────────────────────────────────────────┤
+│  Readers LAN    │  APIs Fabricante  │  APIs Terceros       │
+│  (Keonn, etc.)  │  (Tuya, eWeLink)  │  (personalizadas)   │
+└────────┬────────┴────────┬──────────┴──────────┬───────────┘
+         │                 │                     │
+         └─────────────────┼─────────────────────┘
+                           ▼
+              ┌────────────────────────┐
+              │   HorusEye API         │
+              │   POST /api/eventos-rfid │
+              └───────────┬────────────┘
+                          ▼
+              ┌────────────────────────┐
+              │   PostgreSQL           │
+              │   (almacena lecturas)  │
+              └───────────┬────────────┘
+                          ▼
+              ┌────────────────────────┐
+              │   Dashboard / KPIs     │
+              │   Reportes             │
+              └────────────────────────┘
+```
+
+### Diferencia entre Dispositivos y NFC Tester
+
+| Opción | Uso | Público |
+|--------|-----|---------|
+| **Dispositivos** | Configurar y gestionar Readers RFID físicos | Usuarios del sistema |
+| **NFC Tester** | Probar el sistema sin hardware real | Desarrolladores / Demostraciones |
 
 ## URLs de Producción
 
@@ -86,7 +142,7 @@ HorusEye/
 │       └── init.sql
 ├── docker-compose.yml             # Despliegue en OCI VM
 ├── Dockerfile                     # Build multi-stage
-├── render.yaml                    # Config Render (legacy)
+├── .github/workflows/ci-cd.yml   # CI/CD GitHub Actions
 └── scripts/                       # Scripts de simulación
 ```
 
@@ -275,11 +331,13 @@ docker exec -i horuseye-db psql -U horuseyeuser -d horuseyedb < /tmp/horuseye_mi
 
 5. **Npgsql timestamps**: `Npgsql.EnableLegacyTimestampBehavior = true` en Program.cs
 
-6. **Render (legacy)**: El `render.yaml` existe pero ya no se usa. El backend está en OCI VM.
+6. **Render (eliminado)**: El servicio fue eliminado de Render. El backend está en OCI VM.
 
 7. **Docker build**: SIEMPRE usar `--no-cache` despues de cambios en el codigo C# para evitar capas viejas.
 
 8. **Tunel Cloudflare**: Compartido con EBM. Token en `/opt/ebm/Backends/Apis/dotNET10/.env`.
+
+9. **CI/CD**: Deploy automático a OCI vía GitHub Actions (appleboy/ssh-action).
 
 ## Endpoints
 
@@ -358,5 +416,10 @@ docker exec -i horuseye-db psql -U horuseyeuser -d horuseyedb < /tmp/horuseye_mi
 - [ ] Configurar backups de PostgreSQL
 - [ ] Agregar health checks en docker-compose
 - [ ] Monitoreo y alertas
-- [ ] Migrar completamente de Render ( eliminar `render.yaml` si ya no se usa)
+- [ ] ~~Migrar completamente de Render~~ ✅ Completado
 - [ ] Documentar API con Swagger/OpenAPI
+- [ ] Integrar APIs de fabricantes (Tuya, eWeLink, etc.)
+- [ ] Dashboard con filtros por Proveedor/Cliente/Jerarquía
+- [ ] Formulario de usuario: confirmar contraseña/correo 2 veces
+
+> Ver `Documents/Software_Improvements_Request_Check_List.md` para lista completa de mejoras.
