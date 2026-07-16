@@ -86,3 +86,4 @@ jobs:
         run: |
           sleep 10
           curl -sf https://horuseye-api.mauricioadachi.dev/health || echo "Health check pending..."
+# Test CI/CD
