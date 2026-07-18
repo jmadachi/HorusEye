@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Smartphone, Wifi, WifiOff, CheckCircle, XCircle, Send } from 'lucide-react';
+import { Smartphone, Wifi, WifiOff, CheckCircle, XCircle, Send, Keyboard } from 'lucide-react';
 import api from '../services/api';
 import type { DispositivoRfid, ApiResponse } from '../types';
 
@@ -22,6 +22,7 @@ export default function NfcTester() {
   const [dispositivoSeleccionado, setDispositivoSeleccionado] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [lastTag, setLastTag] = useState<string | null>(null);
+  const [manualEpc, setManualEpc] = useState('');
   const logId = useRef(0);
   const readerRef = useRef<any>(null);
 
@@ -124,6 +125,24 @@ export default function NfcTester() {
     addLog('-', 'success', 'Lectura detenida', '-');
   };
 
+  const sendManual = async () => {
+    if (!manualEpc.trim()) return;
+    const epc = manualEpc.trim();
+    setStatus('sending');
+    setLastTag(epc);
+    const dispositivo = dispositivos.find(d => d.id === dispositivoSeleccionado);
+    try {
+      const result = await sendToApi(epc);
+      setStatus(result.ok ? 'success' : 'error');
+      addLog(epc, result.ok ? 'success' : 'error', result.message, dispositivo?.nombre || '-');
+    } catch (err: any) {
+      setStatus('error');
+      addLog(epc, 'error', err.message || 'Error de conexion', dispositivo?.nombre || '-');
+    }
+    setManualEpc('');
+    setTimeout(() => setStatus('idle'), 2000);
+  };
+
   const statusConfig = {
     idle: { color: 'bg-gray-500', text: 'Inactivo', icon: WifiOff },
     listening: { color: 'bg-blue-500', text: 'Escuchando...', icon: Wifi },
@@ -167,6 +186,33 @@ export default function NfcTester() {
           {dispositivos.length === 0 && (
             <p className="text-xs text-gray-400 mt-1">Registra un dispositivo en /dispositivos primero.</p>
           )}
+        </div>
+      </div>
+
+      {/* Manual Input */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow space-y-3">
+        <h2 className="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+          <Keyboard size={16} />
+          Envio Manual
+        </h2>
+        <p className="text-xs text-gray-400">Si el NFC no funciona, escribe el EPC de la tarjeta manualmente.</p>
+        <div className="flex gap-2">
+          <input
+            value={manualEpc}
+            onChange={e => setManualEpc(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && sendManual()}
+            placeholder="Ej: E28011700000020811603477"
+            disabled={!dispositivoSeleccionado || status === 'sending'}
+            className="flex-1 border dark:border-gray-600 rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200 font-mono text-sm"
+          />
+          <button
+            onClick={sendManual}
+            disabled={!manualEpc.trim() || !dispositivoSeleccionado || status === 'sending'}
+            className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a8e] text-white rounded font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <Send size={14} />
+            Enviar
+          </button>
         </div>
       </div>
 
