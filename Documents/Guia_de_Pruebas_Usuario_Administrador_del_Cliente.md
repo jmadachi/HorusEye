@@ -1,7 +1,7 @@
 # Guia de Pruebas - Administrador del Cliente
 
 **Rol:** Administrador del Cliente
-**URL:** https://horuseye-app.mauricioadachi.dev
+**URL:** https://horuseye.mauricioadachi.dev
 **Credenciales:** Crear desde el Admin del Sistema o Admin del Proveedor
 
 ---
@@ -35,7 +35,7 @@ El Administrador del Cliente puede gestionar usuarios Asistentes del Cliente aso
 
 ## Prueba 1: Login
 
-1. Abrir https://horuseye-app.mauricioadachi.dev
+1. Abrir https://horuseye.mauricioadachi.dev
 2. Ingresar credenciales del Admin del Cliente
 3. Iniciar Sesion
 4. **Esperado:** Dashboard se carga. Menu muestra: Dashboard, Activos, Tags, Reportes, Autorizaciones, Usuarios, Dispositivos, Ubicaciones. **NO** muestra "Proveedores" ni "Clientes".

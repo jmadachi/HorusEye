@@ -1,7 +1,7 @@
 # Guia de Pruebas - Asistente del Proveedor
 
 **Rol:** Asistente del Proveedor
-**URL:** https://horuseye-app.mauricioadachi.dev
+**URL:** https://horuseye.mauricioadachi.dev
 **Credenciales:** Crear desde el Admin del Sistema o Admin del Proveedor
 
 ---
@@ -29,7 +29,7 @@ El Asistente del Proveedor tiene **solo lectura** dentro del ambito de SU provee
 
 ## Prueba 1: Login
 
-1. Abrir https://horuseye-app.mauricioadachi.dev
+1. Abrir https://horuseye.mauricioadachi.dev
 2. Ingresar credenciales del Asistente del Proveedor
 3. Iniciar Sesion
 4. **Esperado:** Dashboard se carga. Menu muestra modulos de lectura.

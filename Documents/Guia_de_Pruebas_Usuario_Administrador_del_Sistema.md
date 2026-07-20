@@ -1,7 +1,7 @@
 # Guia de Pruebas - Administrador del Sistema
 
 **Rol:** Administrador del Sistema
-**URL:** https://horuseye-app.mauricioadachi.dev
+**URL:** https://horuseye.mauricioadachi.dev
 **Credenciales:** admin@horuseye.com / Admin123!
 
 ---
@@ -30,7 +30,7 @@ El Administrador del Sistema tiene **acceso total** a todas las funcionalidades 
 
 ## Prueba 1: Login
 
-1. Abrir https://horuseye-app.mauricioadachi.dev
+1. Abrir https://horuseye.mauricioadachi.dev
 2. Ingresar email: `admin@horuseye.com`
 3. Ingresar contrasena: `Admin123!`
 4. Hacer clic en "Iniciar Sesion"

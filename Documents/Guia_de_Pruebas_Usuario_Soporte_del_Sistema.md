@@ -1,7 +1,7 @@
 # Guia de Pruebas - Soporte del Sistema
 
 **Rol:** Soporte del Sistema
-**URL:** https://horuseye-app.mauricioadachi.dev
+**URL:** https://horuseye.mauricioadachi.dev
 **Credenciales:** Crear desde el Admin del Sistema
 
 ---
@@ -30,7 +30,7 @@ El Soporte del Sistema tiene **solo lectura** en todo el sistema. Puede ver todo
 
 ## Prueba 1: Login
 
-1. Abrir https://horuseye-app.mauricioadachi.dev
+1. Abrir https://horuseye.mauricioadachi.dev
 2. Ingresar credenciales del Soporte (creado previamente)
 3. Iniciar Sesion
 4. **Esperado:** Redirige al Dashboard. Se muestra el rol "Soporte del Sistema".

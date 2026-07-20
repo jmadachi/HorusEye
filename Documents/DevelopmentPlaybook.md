@@ -1987,7 +1987,7 @@ Se migró el backend y la base de datos a una VM de Oracle Cloud Infrastructure 
 | Componente | Ubicación | URL |
 |------------|-----------|-----|
 | **Backend + DB** | OCI VM (129.146.22.246) | https://horuseye-api.mauricioadachi.dev |
-| **Frontend** | Vercel | https://horuseye-app.mauricioadachi.dev |
+| **Frontend** | Vercel | https://horuseye.mauricioadachi.dev |
 
 #### OCI VM
 - **Instancia**: instance-20260703-1405 (ARM, 4 OCPUs / 24 GB RAM)
@@ -2115,7 +2115,7 @@ Generar un volumen estadísticamente razonable de datos de prueba para el dashbo
 
 | URL | Descripción |
 |-----|-------------|
-| https://horuseye-app.mauricioadachi.dev | Frontend (Dashboard) |
+| https://horuseye.mauricioadachi.dev | Frontend (Dashboard) |
 | https://horuseye-api.mauricioadachi.dev | API (Backend) |
 
 ### 25.5 Credenciales de Prueba
@@ -2395,7 +2395,7 @@ docker compose build --no-cache api && docker compose up -d
 | **Directorio deploy** | `/opt/horuseye` |
 | **API (localhost)** | `http://localhost:8081` |
 | **API (publica)** | `https://horuseye-api.mauricioadachi.dev` |
-| **Frontend** | `https://horuseye-app.mauricioadachi.dev` |
+| **Frontend** | `https://horuseye.mauricioadachi.dev` |
 | **Admin login** | `admin@horuseye.com` / `Admin123!` |
 | **Consulta login** | `consulta@horuseye.com` / `Consulta123!` |
 | **Tunel token** | En `/opt/ebm/Backends/Apis/dotNET10/.env` (compartido con EBM) |

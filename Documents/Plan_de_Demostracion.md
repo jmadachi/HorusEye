@@ -14,7 +14,7 @@ Demostrar a potenciales clientes cómo se controlan inventarios y activos en tie
 Estos pasos se ejecutan una sola vez y quedan guardados para todas las demostraciones posteriores.
 
 ### 1.1 Login como Administrador
-- Abrir `https://horuseye-app.mauricioadachi.dev`
+- Abrir `https://horuseye.mauricioadachi.dev`
 - Login: `admin@horuseye.com` / `Admin123!`
 
 ### 1.2 Crear Usuario Proveedor

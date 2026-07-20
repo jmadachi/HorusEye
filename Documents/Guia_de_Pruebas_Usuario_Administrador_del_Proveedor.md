@@ -1,7 +1,7 @@
 # Guia de Pruebas - Administrador del Proveedor
 
 **Rol:** Administrador del Proveedor
-**URL:** https://horuseye-app.mauricioadachi.dev
+**URL:** https://horuseye.mauricioadachi.dev
 **Credenciales:** Crear desde el Admin del Sistema
 
 ---
@@ -35,7 +35,7 @@ El Administrador del Proveedor puede gestionar usuarios asociados a SU proveedor
 
 ## Prueba 1: Login
 
-1. Abrir https://horuseye-app.mauricioadachi.dev
+1. Abrir https://horuseye.mauricioadachi.dev
 2. Ingresar credenciales del Admin del Proveedor
 3. Iniciar Sesion
 4. **Esperado:** Dashboard se carga. Menu muestra: Dashboard, Activos, Tags, Reportes, Autorizaciones, Usuarios, Clientes, Dispositivos, Ubicaciones.

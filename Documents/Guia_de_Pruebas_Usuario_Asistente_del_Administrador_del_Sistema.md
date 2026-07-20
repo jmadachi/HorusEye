@@ -1,7 +1,7 @@
 # Guia de Pruebas - Asistente del Administrador del Sistema
 
 **Rol:** Asistente del Administrador del Sistema
-**URL:** https://horuseye-app.mauricioadachi.dev
+**URL:** https://horuseye.mauricioadachi.dev
 **Credenciales:** Crear desde el Admin del Sistema
 
 ---
@@ -36,7 +36,7 @@ El Asistente del Administrador del Sistema puede crear usuarios de los tipos: Pr
 
 ## Prueba 1: Login
 
-1. Abrir https://horuseye-app.mauricioadachi.dev
+1. Abrir https://horuseye.mauricioadachi.dev
 2. Ingresar credenciales del Asistente del Admin (creado previamente)
 3. Hacer clic en "Iniciar Sesion"
 4. **Esperado:** Redirige al Dashboard. En el header se muestra el rol correcto.

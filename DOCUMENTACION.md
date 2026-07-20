@@ -66,7 +66,7 @@ TAGs (señales RFID)
 
 | Servicio | URL |
 |----------|-----|
-| Frontend | https://horuseye-app.mauricioadachi.dev |
+| Frontend | https://horuseye.mauricioadachi.dev |
 | API | https://horuseye-api.mauricioadachi.dev |
 
 ## Stack Tecnológico
@@ -323,7 +323,7 @@ docker exec -i horuseye-db psql -U horuseyeuser -d horuseyedb < /tmp/horuseye_mi
 
 1. **Puerto 8081**: HorusEye usa 8081 en el host para evitar conflicto con EBM (8080)
 
-2. **CORS**: La API permite `https://horuseye.vercel.app` y `https://horuseye-app.mauricioadachi.dev`
+2. **CORS**: La API permite `https://horuseye.vercel.app` y `https://horuseye.mauricioadachi.dev`
 
 3. **SignalR**: El token JWT se pasa como query parameter `access_token` en WebSocket
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-API="https://horuseye-api.onrender.com"
+API="https://horuseye-api.mauricioadachi.dev"
 echo "LOGIN..."
 LOGIN=$(curl -s -X POST "$API/api/auth/login" -H "Content-Type: application/json" -d '{"email":"admin@horuseye.com","password":"Admin123!"}')
 TOKEN=$(echo "$LOGIN" | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)

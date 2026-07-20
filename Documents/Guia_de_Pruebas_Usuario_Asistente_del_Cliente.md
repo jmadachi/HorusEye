@@ -1,7 +1,7 @@
 # Guia de Pruebas - Asistente del Cliente
 
 **Rol:** Asistente del Cliente
-**URL:** https://horuseye-app.mauricioadachi.dev
+**URL:** https://horuseye.mauricioadachi.dev
 **Credenciales:** Crear desde el Admin del Sistema, Admin del Proveedor o Admin del Cliente
 
 ---
@@ -29,7 +29,7 @@ El Asistente del Cliente tiene **solo lectura** estricta dentro de SU cliente. E
 
 ## Prueba 1: Login
 
-1. Abrir https://horuseye-app.mauricioadachi.dev
+1. Abrir https://horuseye.mauricioadachi.dev
 2. Ingresar credenciales del Asistente del Cliente
 3. Iniciar Sesion
 4. **Esperado:** Dashboard se carga. Menu muestra: Dashboard, Activos, Tags, Reportes, Autorizaciones, Dispositivos, Ubicaciones. **NO** muestra "Usuarios", "Proveedores", "Clientes", "Fabricantes".
